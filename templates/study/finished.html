@@ -1,0 +1,60 @@
+{% extends "study/base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        
+        <div class="card p-4 mb-4 bg-primary text-white text-center">
+            <h2 class="display-4 fw-bold">{{ stats.total_learned }}</h2>
+            <p class="mb-0">Tổng số từ bạn đang học</p>
+        </div>
+
+        <h5 class="fw-bold mb-3">Chi tiết cấp độ trí nhớ</h5>
+        
+        <div class="card mb-3 p-3 border-start border-5 border-warning">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-1 text-warning fw-bold">Bậc thầy (Lv.5)</h5>
+                    <small class="text-muted">Đã thuộc lòng, không cần học lại nhiều.</small>
+                </div>
+                <span class="fs-4 fw-bold">{{ stats.level_counts.5 }}</span>
+            </div>
+        </div>
+
+        <div class="card mb-3 p-3 border-start border-5 border-success">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-1 text-success fw-bold">Đang nhớ (Lv.3 - 4)</h5>
+                    <small class="text-muted">Đang trong quá trình ghi nhớ.</small>
+                </div>
+                <span class="fs-4 fw-bold">
+                    {{ stats.level_counts.3|add:stats.level_counts.4 }}
+                </span>
+            </div>
+        </div>
+
+        <div class="card mb-3 p-3 border-start border-5 border-info">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-1 text-info fw-bold">Mới học (Lv.1 - 2)</h5>
+                    <small class="text-muted">Cần ôn tập nhiều hơn.</small>
+                </div>
+                <span class="fs-4 fw-bold">
+                    {{ stats.level_counts.1|add:stats.level_counts.2 }}
+                </span>
+            </div>
+        </div>
+
+         <div class="card mb-3 p-3 border-start border-5 border-secondary">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-1 text-secondary fw-bold">Chưa thuộc (Lv.0)</h5>
+                    <small class="text-muted">Vừa sai hoặc chưa bắt đầu.</small>
+                </div>
+                <span class="fs-4 fw-bold">{{ stats.level_counts.0 }}</span>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

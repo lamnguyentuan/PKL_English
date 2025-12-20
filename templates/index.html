@@ -28,7 +28,7 @@
                 <p class="card-text text-muted">{{ topic.description|truncatewords:20 }}</p>
             </div>
             <div class="card-footer bg-white border-top-0">
-                <a href="#" class="btn btn-outline-primary w-100">Vào học ngay</a>
+                <a href="{% url 'study_session' topic.id %}" class="btn btn-outline-primary w-100">Vào học ngay</a>
             </div>
         </div>
     </div>

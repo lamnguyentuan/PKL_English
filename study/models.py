@@ -29,15 +29,12 @@ class Vocabulary(models.Model):
 
 # --- 2. DỮ LIỆU ĐỘNG (Tiến độ học tập của từng User) ---
 class Flashcard(models.Model):
-    """Lưu trạng thái học của 1 User với 1 Từ vựng (Thuật toán Leitner)"""
+  
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     vocabulary = models.ForeignKey(Vocabulary, on_delete=models.CASCADE)
     
-    # Các chỉ số Leitner / Spaced Repetition
-    box = models.IntegerField(default=1, verbose_name="Hộp số (1-5)")
-    next_review = models.DateTimeField(default=timezone.now, verbose_name="Thời gian ôn tới")
-    is_mastered = models.BooleanField(default=False, verbose_name="Đã thuộc lòng")
-    
+
+    mastery_level = models.IntegerField(default=0)    
     last_reviewed = models.DateTimeField(null=True, blank=True)
     
     class Meta:
@@ -45,7 +42,7 @@ class Flashcard(models.Model):
         unique_together = ('user', 'vocabulary') 
 
     def __str__(self):
-        return f"{self.user.username} - {self.vocabulary.word} (Box {self.box})"
+        return f"{self.user.username} - {self.vocabulary.word} - (Lv{self.mastery_level})"
 
 # --- 3. LOG & SỔ TAY ---
 class StudySession(models.Model):
