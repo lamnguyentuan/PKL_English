@@ -1,177 +1,191 @@
-{% extends "study/base.html" %}
+{% extends "base.html" %}
+{% load static %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card shadow-sm">
-            <div class="card-body p-4">
-                <!-- Header với loại câu hỏi -->
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <span class="badge bg-primary fs-6">
-                        {% if question.type == 'listening' %}
-                            <i class="fas fa-headphones me-1"></i> Nghe và viết
-                        {% else %}
-                            <i class="fas fa-pen me-1"></i> Điền từ
+<link rel="stylesheet" href="{% static 'study/css/style.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+<div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 85vh;">
+
+    <div class="w-100 fixed-top bg-white px-3 py-2 d-flex align-items-center shadow-sm" style="height: 60px; z-index: 100;">
+        <a href="{% url 'topic_list' %}" class="text-muted me-3"><i class="fas fa-times fa-lg"></i></a>
+        <div class="progress flex-grow-1 rounded-pill" style="height: 8px; background-color: #eee;">
+            <div class="progress-bar bg-warning rounded-pill" style="width: 30%;"></div>
+        </div>
+        <div class="ms-3 text-warning"><i class="fas fa-lemon fa-lg"></i></div>
+    </div>
+
+    <div class="study-container w-100 px-3" style="max-width: 500px; margin-top: 50px;">
+
+        <div id="screen-flashcard" class="animate__animated animate__fadeIn">
+            
+            <div class="flip-container" onclick="toggleCard()">
+                <div id="my-card" class="card-container">
+                    
+                    <div class="card-face-front">
+                        <h2 class="fw-bold text-primary mb-1 display-5">{{ question.word }}</h2>
+                        
+                    
+                        <i class="fas fa-hand-pointer text-warning mt-2 fa-2x animate__animated animate__pulse animate__infinite"></i>
+                    </div>
+                    
+                    <div class="card-face-back">
+                        <h2 class="fw-bold text-primary mb-1 display-5">{{ question.word }}</h2>
+                        <p class="text-muted fst-italic mb-3">/{{ question.phonetic }}/</p>
+                        
+                        <h4 class="text-dark mb-4 text-center">{{ question.meaning }}</h4>
+
+                        {% if question.audio %}
+                            <button onclick="event.stopPropagation(); playAudio('fc-audio')" class="btn btn-warning text-white rounded-circle p-3 mb-4 shadow-sm">
+                                <i class="fas fa-volume-up fa-lg"></i>
+                            </button>
+                            <audio id="fc-audio" src="{{ question.audio }}"></audio>
                         {% endif %}
-                    </span>
-                    <a href="{% url 'topic_list' %}" class="btn btn-outline-secondary btn-sm">
-                        <i class="fas fa-arrow-left me-1"></i> Quay lại
-                    </a>
-                </div>
 
-                <!-- Hình ảnh minh họa (nếu có) -->
-                {% if question.image %}
-                <div class="text-center mb-4">
-                    <img src="{{ question.image }}" class="img-fluid rounded" style="max-height: 200px; object-fit: cover;">
-                </div>
-                {% endif %}
-
-                <!-- Audio player (nếu là câu hỏi nghe) -->
-                {% if question.type == 'listening' and question.audio %}
-                <div class="text-center mb-4">
-                    <button type="button" class="btn btn-lg btn-outline-primary rounded-circle" id="playAudioBtn" style="width: 80px; height: 80px;">
-                        <i class="fas fa-volume-up fa-2x"></i>
-                    </button>
-                    <audio id="questionAudio" src="{{ question.audio }}"></audio>
-                    <p class="text-muted mt-2">Nhấn để nghe</p>
-                </div>
-                {% endif %}
-
-                <!-- Hướng dẫn -->
-                <div class="alert alert-light border mb-4">
-                    <i class="fas fa-lightbulb text-warning me-2"></i>
-                    {{ question.instruction }}
-                </div>
-
-                <!-- Câu có chỗ trống (nếu là fill_blank) -->
-                {% if question.sentence %}
-                <div class="text-center mb-4">
-                    <p class="fs-4 fw-light" id="sentenceDisplay">{{ question.sentence }}</p>
-                </div>
-                {% endif %}
-
-                <!-- Gợi ý độ dài từ -->
-                <div class="text-center text-muted mb-3">
-                    <small>Gợi ý: Từ có <strong>{{ question.word_length }}</strong> ký tự</small>
-                </div>
-
-                <!-- Form nhập câu trả lời -->
-                <form id="answerForm">
-                    <input type="hidden" id="cardId" value="{{ question.card_id }}">
-                    <input type="hidden" id="topicId" value="{{ topic_id }}">
-                    
-                    <div class="mb-3">
-                        <input type="text" 
-                               class="form-control form-control-lg text-center" 
-                               id="answerInput" 
-                               placeholder="Nhập câu trả lời của bạn..." 
-                               autocomplete="off"
-                               autofocus>
-                    </div>
-                    
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
-                            <i class="fas fa-check me-2"></i> Kiểm tra
+                        <button onclick="event.stopPropagation(); startQuiz()" class="btn btn-mochi w-75 rounded-pill py-3 text-uppercase mt-auto shadow-sm">
+                            Đã nhớ! Kiểm tra
                         </button>
                     </div>
-                </form>
 
-                <!-- Kết quả (ẩn ban đầu) -->
-                <div id="resultSection" class="mt-4" style="display: none;">
-                    <div id="resultAlert" class="alert text-center">
-                        <h4 id="resultTitle"></h4>
-                        <p id="resultMessage"></p>
-                    </div>
-                    <div class="d-grid">
-                        <button type="button" class="btn btn-outline-primary btn-lg" id="nextBtn">
-                            <i class="fas fa-arrow-right me-2"></i> Câu tiếp theo
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
+
+        <div id="screen-quiz" class="hidden animate__animated animate__fadeInRight">
+            <div class="text-center card shadow-sm p-4 border-0">
+                
+                {% if question.image %}
+                    <img src="{{ question.image }}" class="img-fluid rounded mb-4" style="max-height: 150px;">
+                {% endif %}
+
+                <h5 class="text-secondary mb-3 small text-uppercase fw-bold">{{ question.instruction }}</h5>
+
+                {% if question.content %}
+                    <h4 class="fw-bold text-dark mb-4" style="letter-spacing: 2px;">{{ question.content }}</h4>
+                {% endif %}
+
+                <input type="text" id="user-input" 
+                       class="form-control form-control-lg text-center fw-bold border-2 rounded-pill py-3 mb-4" 
+                       placeholder="Gõ lại từ vựng..." autocomplete="off">
+
+                <button onclick="submitAnswer()" class="btn btn-mochi w-100 rounded-pill py-3 shadow-sm" id="btn-check">
+                    KIỂM TRA
+                </button>
+            </div>
+        </div>
+
+        <div id="screen-correct" class="hidden text-center p-5 animate__animated animate__bounceIn">
+            <i class="fas fa-check-circle text-success" style="font-size: 80px;"></i>
+            <h2 class="fw-bold text-success mt-4">CHÍNH XÁC!</h2>
+            <p class="text-muted">Giỏi lắm! Đang chuyển từ tiếp theo...</p>
+        </div>
+
+        <div id="screen-wrong" class="hidden p-4 text-center animate__animated animate__shakeX card shadow-sm border-danger">
+            <div class="alert alert-danger rounded-pill fw-bold mb-4">CHƯA CHÍNH XÁC</div>
+            
+            <h6 class="text-muted small text-uppercase">Đáp án đúng là:</h6>
+            <h2 class="fw-bold text-primary">{{ question.word }}</h2>
+            <p class="text-dark">{{ question.meaning }}</p>
+            
+            <button onclick="nextQuestion()" class="btn btn-secondary w-100 rounded-pill py-3 fw-bold mt-3">TIẾP TỤC</button>
+        </div>
+
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('answerForm');
-    const answerInput = document.getElementById('answerInput');
-    const submitBtn = document.getElementById('submitBtn');
-    const resultSection = document.getElementById('resultSection');
-    const resultAlert = document.getElementById('resultAlert');
-    const resultTitle = document.getElementById('resultTitle');
-    const resultMessage = document.getElementById('resultMessage');
-    const nextBtn = document.getElementById('nextBtn');
-    const playAudioBtn = document.getElementById('playAudioBtn');
-    const questionAudio = document.getElementById('questionAudio');
+    // --- KHAI BÁO BIẾN ---
+    const screenFlashcard = document.getElementById('screen-flashcard');
+    const screenQuiz = document.getElementById('screen-quiz');
+    const screenCorrect = document.getElementById('screen-correct');
+    const screenWrong = document.getElementById('screen-wrong');
+    const userInput = document.getElementById('user-input');
+    const myCard = document.getElementById('my-card');
+    
+    let isFlipped = false;
 
-    // Play audio button
-    if (playAudioBtn && questionAudio) {
-        playAudioBtn.addEventListener('click', function() {
-            questionAudio.play();
+    // --- 1. HÀM LẬT THẺ (Toggle Class) ---
+    function toggleCard() {
+        if (!isFlipped) {
+        
+            myCard.classList.add('is-flipped');
+            
+            
+            setTimeout(() => { playAudio('fc-audio'); }, 300);
+            
+            isFlipped = true;
+        } else {
+            
+            myCard.classList.remove('is-flipped');
+            isFlipped = false;
+        }
+    }
+
+    // --- 2. CHUYỂN SANG QUIZ ---
+    function startQuiz() {
+        screenFlashcard.classList.add('hidden'); 
+        screenQuiz.classList.remove('hidden');   
+        userInput.focus();                       
+    }
+
+    // --- 3. NỘP BÀI (GỌI API) ---
+    function submitAnswer() {
+        const answer = userInput.value.trim();
+        const cardId = "{{ question.card_id }}"; 
+
+        if (!answer) return; 
+
+        // Khóa nút để tránh spam click
+        document.getElementById('btn-check').disabled = true;
+
+        fetch("{% url 'submit_answer' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({ card_id: cardId, user_answer: answer })
+        })
+        .then(res => res.json())
+        .then(data => {
+            handleResult(data);
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Lỗi kết nối server!");
+            document.getElementById('btn-check').disabled = false;
         });
     }
 
-    // Submit answer
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const cardId = document.getElementById('cardId').value;
-        const answer = answerInput.value.trim();
-        
-        if (!answer) {
-            answerInput.classList.add('is-invalid');
-            return;
+   
+    function handleResult(data) {
+        screenQuiz.classList.add('hidden'); 
+
+        if (data.is_correct) {
+            
+            screenCorrect.classList.remove('hidden');
+           
+            setTimeout(() => { location.reload(); }, 1500);
+        } else {
+            
+            screenWrong.classList.remove('hidden');
+            
         }
+    }
 
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Đang kiểm tra...';
+    // --- CÁC HÀM TIỆN ÍCH ---
+    function playAudio(id) {
+        const audio = document.getElementById(id);
+        if(audio && audio.src) audio.play();
+    }
+    
+    function nextQuestion() {
+        location.reload(); // Load lại trang
+    }
 
-        fetch('{% url "submit_answer" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({
-                card_id: cardId,
-                answer: answer
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            form.style.display = 'none';
-            resultSection.style.display = 'block';
-
-            if (data.is_correct) {
-                resultAlert.className = 'alert alert-success text-center';
-                resultTitle.innerHTML = '<i class="fas fa-check-circle me-2"></i> Chính xác!';
-                resultMessage.textContent = 'Tuyệt vời! Bạn đã trả lời đúng.';
-            } else {
-                resultAlert.className = 'alert alert-danger text-center';
-                resultTitle.innerHTML = '<i class="fas fa-times-circle me-2"></i> Sai rồi!';
-                resultMessage.innerHTML = 'Đáp án đúng là: <strong>' + data.correct_word + '</strong>';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-check me-2"></i> Kiểm tra';
-            alert('Có lỗi xảy ra. Vui lòng thử lại.');
-        });
+    // Bắt sự kiện phím Enter ở ô input
+    userInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") submitAnswer();
     });
-
-    // Next question
-    nextBtn.addEventListener('click', function() {
-        const topicId = document.getElementById('topicId').value;
-        window.location.href = '/study/' + topicId + '/';
-    });
-
-    // Remove invalid class on input
-    answerInput.addEventListener('input', function() {
-        this.classList.remove('is-invalid');
-    });
-});
 </script>
 {% endblock %}

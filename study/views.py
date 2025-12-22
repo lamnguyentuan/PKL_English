@@ -38,10 +38,10 @@ def topic_list(request):
 
 @login_required
 def study_session(request, topic_id):
-    card = StudyService.get_random_flashcard(request.user, topic_id)
+    card = StudyService.get_learning_card(request.user, topic_id)
     if not card:
         return render(request, 'study/finished.html', {'message': 'Bạn đã hoàn thành tất cả thẻ trong chủ đề này!'})
-    question_data = StudyService.generate_question_for_flashcard(card)
+    question_data = StudyService.generate_question_data(card)
     return render(request, 'study/study_page.html', {
         'question': question_data,
         'topic_id': topic_id
@@ -52,7 +52,7 @@ def submit_answer(request):
     if request.method == 'POST':
         data = json.loads(request.body)
 
-        result = StudyService.check_answer(request.user, data.get('card_id'), data.get('answer'))
+        result = StudyService.check_answer(request.user, data.get('card_id'), data.get('user_answer'))
         return JsonResponse(result)
 
 @login_required
