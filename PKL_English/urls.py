@@ -19,13 +19,16 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from study.views import index, topic_list, study_session, submit_answer, study_stats
-
+admin.site.site_header = "Hệ thống quản lý PKL English"
+admin.site.site_title = "PKL English Admin Portal"
+admin.site.index_title = "Chào mừng đến với trang quản trị nội dung"
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', index, name='home'),
     path('', include('users.urls')),
     # Study URLs
     path('study/', include('study.urls')),
+    path('speaking/', include('speaking.urls')),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -35,6 +35,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -112,7 +113,32 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+JAZZMIN_SETTINGS = {
+    "site_title": "PKL English Admin",
+    "site_header": "PKL English",
+    "site_brand": "PKL English",
+    "welcome_sign": "Chào mừng bạn đến với hệ thống quản trị PKL English",
+    "copyright": "PKL English Team",
+    "search_model": ["auth.User", "speaking.SpeakingTopic"],
+    "topmenu_links": [
+        {"name": "Trang chủ", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "Xem Website", "url": "/", "new_window": True},
+    ],
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "speaking.SpeakingTopic": "fas fa-microphone",
+        "speaking.SpeakingSentence": "fas fa-comment-dots",
+    },
+}
 
+# Chọn tông màu cho giao diện (UI Customizer)
+JAZZMIN_UI_TWEAKS = {
+    "navbar_variant": "navbar-dark",
+    "theme": "flatly",  # Bạn có thể đổi thành 'darkly', 'slate', 'solar' tùy thích
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
@@ -133,7 +159,7 @@ STATIC_URL = 'static/'
 AUTH_USER_MODEL = 'users.User'
 
 
-LOGIN_REDIRECT_URL = 'topic_list'
+LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
 
 MEDIA_URL = '/media/'  
