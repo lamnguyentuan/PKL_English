@@ -30,7 +30,19 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="#">Sổ tay từ vựng</a>
+                        <a class="nav-link" href="{% url 'topic_list' %}">
+                            <i class="fas fa-book-open me-1"></i>Học từ vựng
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'notebook' %}">
+                            <i class="fas fa-bookmark me-1"></i>Sổ tay
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'detailed_stats' %}">
+                            <i class="fas fa-chart-bar me-1"></i>Thống kê
+                        </a>
                     </li>
                 </ul>
 

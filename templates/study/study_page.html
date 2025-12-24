@@ -10,8 +10,9 @@
     <div class="w-100 fixed-top bg-white px-3 py-2 d-flex align-items-center shadow-sm" style="height: 60px; z-index: 100;">
         <a href="{% url 'topic_list' %}" class="text-muted me-3"><i class="fas fa-times fa-lg"></i></a>
         <div class="progress flex-grow-1 rounded-pill" style="height: 8px; background-color: #eee;">
-            <div class="progress-bar bg-warning rounded-pill" style="width: 30%;"></div>
+            <div class="progress-bar bg-warning rounded-pill" id="progress-bar"></div>
         </div>
+        <script>document.getElementById('progress-bar').style.width = '{{ progress|default:0 }}%';</script>
         <div class="ms-3 text-warning"><i class="fas fa-lemon fa-lg"></i></div>
     </div>
 
@@ -77,7 +78,14 @@
         <div id="screen-correct" class="hidden text-center p-5 animate__animated animate__bounceIn">
             <i class="fas fa-check-circle text-success" style="font-size: 80px;"></i>
             <h2 class="fw-bold text-success mt-4">CHÍNH XÁC!</h2>
-            <p class="text-muted">Giỏi lắm! Đang chuyển từ tiếp theo...</p>
+            <p class="text-muted mb-3">Giỏi lắm!</p>
+            
+            <!-- Nút lưu sổ tay -->
+            <button onclick="saveToNotebook()" class="btn btn-outline-primary rounded-pill mb-3" id="btn-save-correct">
+                <i class="fas fa-bookmark me-1"></i> Lưu vào sổ tay
+            </button>
+            
+            <button onclick="nextQuestion()" class="btn btn-success w-100 rounded-pill py-3 fw-bold mt-2">TIẾP TỤC</button>
         </div>
 
         <div id="screen-wrong" class="hidden p-4 text-center animate__animated animate__shakeX card shadow-sm border-danger">
@@ -87,105 +95,26 @@
             <h2 class="fw-bold text-primary">{{ question.word }}</h2>
             <p class="text-dark">{{ question.meaning }}</p>
             
+            <!-- Nút lưu sổ tay -->
+            <button onclick="saveToNotebook()" class="btn btn-outline-primary rounded-pill mb-3" id="btn-save-wrong">
+                <i class="fas fa-bookmark me-1"></i> Lưu vào sổ tay
+            </button>
+            
             <button onclick="nextQuestion()" class="btn btn-secondary w-100 rounded-pill py-3 fw-bold mt-3">TIẾP TỤC</button>
         </div>
 
     </div>
 </div>
 
-<script>
-    // --- KHAI BÁO BIẾN ---
-    const screenFlashcard = document.getElementById('screen-flashcard');
-    const screenQuiz = document.getElementById('screen-quiz');
-    const screenCorrect = document.getElementById('screen-correct');
-    const screenWrong = document.getElementById('screen-wrong');
-    const userInput = document.getElementById('user-input');
-    const myCard = document.getElementById('my-card');
-    
-    let isFlipped = false;
+<!-- Data container for JavaScript -->
+<div id="page-data" 
+     data-submit-url="{% url 'submit_answer' %}"
+     data-notebook-url="{% url 'add_to_notebook' %}"
+     data-csrf="{{ csrf_token }}"
+     data-card-id="{{ question.card_id }}"
+     data-topic-id="{{ topic_id }}"
+     data-vocab-id="{{ question.vocabulary_id }}"
+     style="display:none;"></div>
 
-    // --- 1. HÀM LẬT THẺ (Toggle Class) ---
-    function toggleCard() {
-        if (!isFlipped) {
-        
-            myCard.classList.add('is-flipped');
-            
-            
-            setTimeout(() => { playAudio('fc-audio'); }, 300);
-            
-            isFlipped = true;
-        } else {
-            
-            myCard.classList.remove('is-flipped');
-            isFlipped = false;
-        }
-    }
-
-    // --- 2. CHUYỂN SANG QUIZ ---
-    function startQuiz() {
-        screenFlashcard.classList.add('hidden'); 
-        screenQuiz.classList.remove('hidden');   
-        userInput.focus();                       
-    }
-
-    // --- 3. NỘP BÀI (GỌI API) ---
-    function submitAnswer() {
-        const answer = userInput.value.trim();
-        const cardId = "{{ question.card_id }}"; 
-
-        if (!answer) return; 
-
-        // Khóa nút để tránh spam click
-        document.getElementById('btn-check').disabled = true;
-
-        fetch("{% url 'submit_answer' %}", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": "{{ csrf_token }}"
-            },
-            body: JSON.stringify({ card_id: cardId, user_answer: answer })
-        })
-        .then(res => res.json())
-        .then(data => {
-            handleResult(data);
-        })
-        .catch(err => {
-            console.error(err);
-            alert("Lỗi kết nối server!");
-            document.getElementById('btn-check').disabled = false;
-        });
-    }
-
-   
-    function handleResult(data) {
-        screenQuiz.classList.add('hidden'); 
-
-        if (data.is_correct) {
-            
-            screenCorrect.classList.remove('hidden');
-           
-            setTimeout(() => { location.reload(); }, 1500);
-        } else {
-            
-            screenWrong.classList.remove('hidden');
-            
-        }
-    }
-
-    // --- CÁC HÀM TIỆN ÍCH ---
-    function playAudio(id) {
-        const audio = document.getElementById(id);
-        if(audio && audio.src) audio.play();
-    }
-    
-    function nextQuestion() {
-        location.reload(); // Load lại trang
-    }
-
-    // Bắt sự kiện phím Enter ở ô input
-    userInput.addEventListener("keypress", function(event) {
-        if (event.key === "Enter") submitAnswer();
-    });
-</script>
+<script src="{% static 'study/js/study_page.js' %}"></script>
 {% endblock %}

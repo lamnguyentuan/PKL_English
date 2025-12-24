@@ -1,4 +1,4 @@
-{% extends "study/base.html" %}
+{% extends "base.html" %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -53,6 +53,19 @@
                 </div>
                 <span class="fs-4 fw-bold">{{ stats.level_counts.0 }}</span>
             </div>
+        </div>
+
+        <!-- Nút hành động -->
+        <div class="d-flex gap-3 mt-4">
+            <a href="{% url 'topic_list' %}" class="btn btn-outline-secondary flex-grow-1 py-3">
+                <i class="fas fa-arrow-left me-2"></i>Quay lại
+            </a>
+            {% if topic_id %}
+            <a href="{% url 'reset_topic' topic_id %}" class="btn btn-primary flex-grow-1 py-3" 
+               onclick="return confirm('Bạn có chắc muốn học lại từ đầu? Tiến độ sẽ bị reset.')">
+                <i class="fas fa-redo me-2"></i>Học lại
+            </a>
+            {% endif %}
         </div>
 
     </div>

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'study/css/style.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+<div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 85vh;">
+
+    <!-- Header với progress bar -->
+    <div class="w-100 fixed-top bg-white px-3 py-2 d-flex align-items-center shadow-sm" style="height: 60px; z-index: 100;">
+        <a href="{% url 'notebook' %}" class="text-muted me-3"><i class="fas fa-times fa-lg"></i></a>
+        <div class="progress flex-grow-1 rounded-pill" style="height: 8px; background-color: #eee;">
+            <div class="progress-bar bg-warning rounded-pill" id="progress-bar"></div>
+        </div>
+        <script>document.getElementById('progress-bar').style.width = '{{ progress|default:0 }}%';</script>
+        <div class="ms-3 text-warning"><i class="fas fa-lemon fa-lg"></i></div>
+    </div>
+
+    <div class="study-container w-100 px-3" style="max-width: 500px; margin-top: 50px;">
+
+        {% if error %}
+        <!-- Thông báo lỗi -->
+        <div class="text-center py-5">
+            <i class="fas fa-exclamation-circle fa-4x text-warning mb-3"></i>
+            <h4 class="fw-bold">{{ error }}</h4>
+            <p class="text-muted">Hãy thêm từ vựng có audio vào sổ tay để ôn tập.</p>
+            <a href="{% url 'topic_list' %}" class="btn btn-primary mt-3">Học thêm từ mới</a>
+        </div>
+
+        {% elif finished %}
+        <!-- Hoàn thành ôn tập -->
+        <div class="text-center py-5 animate__animated animate__bounceIn">
+            <i class="fas fa-trophy fa-4x text-warning mb-3"></i>
+            <h3 class="fw-bold text-success">Hoàn thành ôn tập!</h3>
+            <p class="text-muted">Bạn đã ôn tập {{ total_reviewed }} từ vựng.</p>
+            <div class="d-flex gap-3 mt-4 justify-content-center">
+                <a href="{% url 'notebook' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-book me-2"></i>Sổ tay
+                </a>
+                <a href="{% url 'notebook_review_reset' %}" class="btn btn-primary">
+                    <i class="fas fa-redo me-2"></i>Ôn lại
+                </a>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- Màn hình câu hỏi -->
+        <div id="screen-question" class="animate__animated animate__fadeIn">
+            <div class="text-center card shadow-sm p-4 border-0">
+                
+                <h5 class="text-secondary mb-4 small text-uppercase fw-bold">
+                    {{ question.instruction }}
+                </h5>
+
+                {% if question.type == 'listening' %}
+                <!-- Loại câu hỏi: Nghe chọn đáp án -->
+                
+                <!-- Nút phát audio -->
+                <div class="mb-4">
+                    <button onclick="playAudio()" class="btn btn-light rounded-circle p-4 shadow-sm" id="btn-audio">
+                        <i class="fas fa-volume-up fa-2x text-warning"></i>
+                    </button>
+                    <audio id="question-audio" src="{{ question.audio }}"></audio>
+                </div>
+
+                <!-- Các đáp án -->
+                <div class="d-flex flex-column gap-3 mb-4" id="options-container">
+                    {% for option in question.options %}
+                    <button class="btn btn-outline-secondary py-3 px-4 rounded-pill text-start option-btn"
+                            data-vocab-id="{{ option.vocabulary_id }}"
+                            data-is-correct="{{ option.is_correct|yesno:'true,false' }}">
+                        <span class="badge bg-light text-dark me-2">{{ forloop.counter }}</span>
+                        {{ option.meaning }}
+                    </button>
+                    {% endfor %}
+                </div>
+
+                <!-- Nút kiểm tra -->
+                <button onclick="submitListeningAnswer()" class="btn btn-mochi w-100 rounded-pill py-3 shadow-sm" id="btn-check" disabled>
+                    Kiểm tra
+                </button>
+
+                {% else %}
+                <!-- Loại câu hỏi: Điền vào chỗ trống -->
+                
+                <!-- Câu có chỗ trống -->
+                <h4 class="fw-bold text-dark mb-4" style="letter-spacing: 2px;">{{ question.content }}</h4>
+
+                <!-- Ô nhập đáp án -->
+                <input type="text" id="user-input" 
+                       class="form-control form-control-lg text-center fw-bold border-2 rounded-pill py-3 mb-4" 
+                       placeholder="Gõ từ vựng..." autocomplete="off">
+
+                <!-- Nút kiểm tra -->
+                <button onclick="submitFillBlankAnswer()" class="btn btn-mochi w-100 rounded-pill py-3 shadow-sm" id="btn-check-fill">
+                    Kiểm tra
+                </button>
+
+                {% endif %}
+
+                <!-- Link bỏ qua -->
+                <a href="#" onclick="skipQuestion(); return false;" class="text-muted mt-3 small">
+                    Mình không nhớ từ này
+                </a>
+            </div>
+        </div>
+
+        <!-- Màn hình đúng -->
+        <div id="screen-correct" class="hidden text-center p-5 animate__animated animate__bounceIn">
+            <i class="fas fa-check-circle text-success" style="font-size: 80px;"></i>
+            <h2 class="fw-bold text-success mt-4">CHÍNH XÁC!</h2>
+            <h4 class="text-primary mt-3">{{ question.word }}</h4>
+            <p class="text-muted fst-italic">/{{ question.phonetic }}/</p>
+            <p class="text-dark">{{ question.meaning }}</p>
+            <button onclick="nextQuestion()" class="btn btn-success w-100 rounded-pill py-3 fw-bold mt-3">TIẾP TỤC</button>
+        </div>
+
+        <!-- Màn hình sai -->
+        <div id="screen-wrong" class="hidden p-4 text-center animate__animated animate__shakeX card shadow-sm border-danger">
+            <div class="alert alert-danger rounded-pill fw-bold mb-4">CHƯA CHÍNH XÁC</div>
+            
+            <h6 class="text-muted small text-uppercase">Đáp án đúng là:</h6>
+            <h2 class="fw-bold text-primary">{{ question.word }}</h2>
+            <p class="text-muted fst-italic">/{{ question.phonetic }}/</p>
+            <p class="text-dark">{{ question.meaning }}</p>
+            
+            <button onclick="nextQuestion()" class="btn btn-secondary w-100 rounded-pill py-3 fw-bold mt-3">TIẾP TỤC</button>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+{% if question %}
+<!-- Data container for JavaScript -->
+<div id="question-data" 
+     data-type="{{ question.type }}"
+     data-vocab-id="{{ question.vocabulary_id }}"
+     data-csrf="{{ csrf_token }}"
+     style="display:none;"></div>
+<div id="submit-url" data-url="{% url 'notebook_review_submit' %}" style="display:none;"></div>
+
+<script src="{% static 'study/js/notebook_review.js' %}"></script>
+{% endif %}
+
+{% endblock %}

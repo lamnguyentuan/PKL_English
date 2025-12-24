@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold"><i class="fas fa-chart-bar me-2"></i>Thống kê chi tiết</h3>
+            <a href="{% url 'topic_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Quay lại
+            </a>
+        </div>
+
+        <!-- Tổng quan -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card text-center p-3 bg-primary text-white">
+                    <h2 class="fw-bold mb-1">🔥 {{ stats.streak }}</h2>
+                    <small>Ngày streak</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center p-3 bg-success text-white">
+                    <h2 class="fw-bold mb-1">{{ stats.accuracy }}%</h2>
+                    <small>Độ chính xác</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center p-3 bg-warning text-dark">
+                    <h2 class="fw-bold mb-1">{{ stats.mastered_count }}</h2>
+                    <small>Từ đã thuộc</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center p-3 bg-info text-white">
+                    <h2 class="fw-bold mb-1">{{ stats.total_answers }}</h2>
+                    <small>Tổng câu trả lời</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Biểu đồ 7 ngày -->
+            <div class="col-md-8">
+                <div class="card p-4">
+                    <h5 class="fw-bold mb-3"><i class="fas fa-calendar-week me-2 text-primary"></i>7 ngày gần nhất</h5>
+                    <canvas id="weeklyChart" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Tiến độ -->
+            <div class="col-md-4">
+                <div class="card p-4">
+                    <h5 class="fw-bold mb-3"><i class="fas fa-bullseye me-2 text-success"></i>Tiến độ</h5>
+                    <div class="text-center mb-3">
+                        <div class="position-relative d-inline-block">
+                            <canvas id="progressChart" width="150" height="150"></canvas>
+                            <div class="position-absolute top-50 start-50 translate-middle">
+                                <h3 class="fw-bold mb-0">{{ stats.mastered_count }}</h3>
+                                <small class="text-muted">/{{ stats.total_words }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-center text-muted mb-0">Từ đã thuộc hoàn toàn</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Từ hay sai nhất -->
+        <div class="card p-4 mt-4">
+            <h5 class="fw-bold mb-3"><i class="fas fa-exclamation-triangle me-2 text-danger"></i>Từ hay sai nhất</h5>
+            
+            {% if stats.most_wrong %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Từ vựng</th>
+                            <th>Nghĩa</th>
+                            <th>Số lần sai</th>
+                            <th>Tổng số lần</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for word in stats.most_wrong %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td class="fw-bold text-primary">{{ word.word }}</td>
+                            <td>{{ word.meaning_sentence }}</td>
+                            <td><span class="badge bg-danger">{{ word.wrong_count }}</span></td>
+                            <td>{{ word.total_attempts }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center mb-0">Chưa có dữ liệu. Hãy học thêm để xem thống kê!</p>
+            {% endif %}
+        </div>
+
+        <!-- Thống kê chi tiết -->
+        <div class="card p-4 mt-4">
+            <h5 class="fw-bold mb-3"><i class="fas fa-info-circle me-2 text-info"></i>Chi tiết</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Trả lời đúng: <strong>{{ stats.correct_answers }}</strong>
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-times text-danger me-2"></i>
+                            Trả lời sai: <strong>{{ stats.total_answers|add:"-"|add:stats.correct_answers }}</strong>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-book text-primary me-2"></i>
+                            Tổng từ đang học: <strong>{{ stats.total_words }}</strong>
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-star text-warning me-2"></i>
+                            Từ đã thuộc (Lv.5): <strong>{{ stats.mastered_count }}</strong>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Data container for JavaScript -->
+<script id="stats-data" type="application/json">
+{
+    "dailyStats": {{ stats.daily_stats|safe }},
+    "masteredCount": {{ stats.mastered_count }},
+    "totalWords": {{ stats.total_words }}
+}
+</script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'study/js/detailed_stats.js' %}"></script>
+{% endblock %}

@@ -18,4 +18,21 @@ urlpatterns = [
     # 4. Trang thống kê
     # URL: /study/dashboard/
     path('dashboard/', views.study_stats, name='dashboard'),
+    
+    # Thống kê chi tiết
+    path('stats/', views.detailed_stats, name='detailed_stats'),
+
+    # Sổ tay từ vựng
+    path('notebook/', views.notebook, name='notebook'),
+    path('notebook/add/', views.add_to_notebook, name='add_to_notebook'),
+    path('notebook/remove/', views.remove_from_notebook, name='remove_from_notebook'),
+    path('notebook/update/', views.update_notebook, name='update_notebook'),
+
+    # Reset tiến độ topic
+    path('<int:topic_id>/reset/', views.reset_topic, name='reset_topic'),
+
+    # Ôn tập sổ tay
+    path('notebook/review/', views.notebook_review, name='notebook_review'),
+    path('notebook/review/submit/', views.notebook_review_submit, name='notebook_review_submit'),
+    path('notebook/review/reset/', views.notebook_review_reset, name='notebook_review_reset'),
 ]

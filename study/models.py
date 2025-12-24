@@ -53,6 +53,16 @@ class StudySession(models.Model):
     end_time = models.DateTimeField(null=True, blank=True)
     score = models.IntegerField(default=0) # Điểm số bài test cuối phiên
 
+class StudyLog(models.Model):
+    """Log chi tiết mỗi lần trả lời câu hỏi"""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    vocabulary = models.ForeignKey(Vocabulary, on_delete=models.CASCADE)
+    is_correct = models.BooleanField(default=False)
+    answered_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-answered_at']
+
 class NotebookEntry(models.Model):
     """Sổ tay từ khó"""
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -62,3 +72,4 @@ class NotebookEntry(models.Model):
     
     class Meta:
         unique_together = ('user', 'vocabulary')
+
