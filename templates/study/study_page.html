@@ -34,7 +34,7 @@
                         <h2 class="fw-bold text-primary mb-1 display-5">{{ question.word }}</h2>
                         <p class="text-muted fst-italic mb-3">/{{ question.phonetic }}/</p>
                         
-                        <h4 class="text-dark mb-4 text-center">{{ question.meaning }}</h4>
+                        <h4 class="text-dark mb-4 text-center">{{ question.definition }}</h4>
 
                         {% if question.audio %}
                             <button onclick="event.stopPropagation(); playAudio('fc-audio')" class="btn btn-warning text-white rounded-circle p-3 mb-4 shadow-sm">

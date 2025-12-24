@@ -75,6 +75,7 @@ class StudyService:
                     v.id as vocabulary_id,
                     v.word,
                     v.phonetic,
+                    v.definition,
                     v.meaning_sentence as meaning,
                     v.audio,
                     v.example_sentence,
@@ -120,6 +121,7 @@ class StudyService:
             'type': q_type,
             'word': card_data['word'],
             'phonetic': card_data['phonetic'],
+            'definition': card_data['definition'],  # THÊM DÒNG NÀY
             'meaning': card_data['meaning'],
             'image': image_url,
             'audio': audio_url,
@@ -279,7 +281,7 @@ class StudyService:
             cursor.execute("""
                 INSERT INTO study_notebookentry (user_id, vocabulary_id, note, added_at)
                 VALUES (%s, %s, %s, NOW())
-            """, [user.id, vocabulary_id, note])
+                """, [user.id, vocabulary_id, note])
             return {'status': 'created', 'message': 'Đã lưu vào sổ tay'}
 
     @staticmethod
