@@ -147,8 +147,17 @@ def notebook_review(request):
             'error': 'Cần ít nhất 2 từ có audio trong sổ tay để ôn tập!'
         })
     
-    # Lấy danh sách từ đã ôn trong phiên
     session_key = 'notebook_reviewed'
+    
+    # Nếu là request mới (không phải từ nextQuestion), reset session
+    # Kiểm tra qua tham số hoặc referer
+    is_continuing = request.GET.get('continue', False)
+    if not is_continuing:
+        # Xóa session cũ khi bắt đầu ôn tập mới
+        if session_key in request.session:
+            del request.session[session_key]
+    
+    # Lấy danh sách từ đã ôn trong phiên
     reviewed_ids = request.session.get(session_key, [])
     
     # Lấy câu hỏi tiếp theo

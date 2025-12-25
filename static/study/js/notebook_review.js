@@ -150,11 +150,13 @@ function skipQuestion() {
         })
     })
     .then(() => {
-        location.reload();
+        // Thêm ?continue=1 để giữ session khi chuyển câu
+        window.location.href = window.location.pathname + '?continue=1';
     });
 }
 
 // --- TIẾP TỤC ---
 function nextQuestion() {
-    location.reload();
+    // Thêm ?continue=1 để giữ session khi chuyển câu
+    window.location.href = window.location.pathname + '?continue=1';
 }

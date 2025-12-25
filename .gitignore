@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 db.sqlite3
 /media/
+/temp/
 .DS_Store
 study_data.json
 ffmpeg.exe

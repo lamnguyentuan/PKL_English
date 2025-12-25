@@ -18,6 +18,7 @@ const csrfToken = pageData.dataset.csrf;
 const cardId = pageData.dataset.cardId;
 const topicId = pageData.dataset.topicId;
 const vocabId = pageData.dataset.vocabId;
+const questionType = pageData.dataset.questionType;
 
 let isFlipped = false;
 
@@ -37,7 +38,12 @@ function toggleCard() {
 function startQuiz() {
     screenFlashcard.classList.add('hidden'); 
     screenQuiz.classList.remove('hidden');   
-    userInput.focus();                       
+    userInput.focus();
+    
+    // Tự động phát audio nếu là bài nghe
+    if (questionType === 'listening') {
+        setTimeout(() => { playAudio('quiz-audio'); }, 300);
+    }
 }
 
 // --- 3. NỘP BÀI (GỌI API) ---

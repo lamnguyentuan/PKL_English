@@ -1,5 +1,12 @@
 from django.db import models
 from django.conf import settings
+import os
+
+
+def speaking_recording_path(instance, filename):
+    """Lưu file ghi âm vào folder temp/ riêng biệt"""
+    return os.path.join(settings.TEMP_ROOT, 'speaking_recordings', filename)
+
 
 class SpeakingTopic(models.Model):
     # Tất cả các dòng dưới đây phải thụt lề vào
@@ -24,7 +31,7 @@ class PronunciationLog(models.Model):
     # Các dòng này cũng phải thụt lề
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Người dùng")
     sentence = models.ForeignKey(SpeakingSentence, on_delete=models.CASCADE, related_name='logs', null=True, verbose_name="Câu đã luyện")
-    audio_file = models.FileField(upload_to="speaking_recordings/", verbose_name="File ghi âm")
+    audio_file = models.FileField(upload_to=speaking_recording_path, verbose_name="File ghi âm")
     overall_score = models.FloatField(default=0.0, verbose_name="Điểm tổng quan")
     accuracy_score = models.FloatField(default=0.0, verbose_name="Độ chính xác")
     fluency_score = models.FloatField(default=0.0, verbose_name="Độ lưu loát")

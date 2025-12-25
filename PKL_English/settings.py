@@ -168,5 +168,8 @@ LOGOUT_REDIRECT_URL = 'home'
 MEDIA_URL = '/media/'  
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Folder riêng cho file tạm (ghi âm) - không serve qua web
+TEMP_ROOT = BASE_DIR / 'temp'
+
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"

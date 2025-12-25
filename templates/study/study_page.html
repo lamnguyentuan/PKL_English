@@ -61,6 +61,16 @@
 
                 <h5 class="text-secondary mb-3 small text-uppercase fw-bold">{{ question.instruction }}</h5>
 
+                {% if question.type == 'listening' and question.audio %}
+                <!-- Nút phát audio cho bài nghe -->
+                <div class="mb-4">
+                    <button onclick="playAudio('quiz-audio')" class="btn btn-light rounded-circle p-4 shadow-sm" id="btn-audio">
+                        <i class="fas fa-volume-up fa-2x text-warning"></i>
+                    </button>
+                    <audio id="quiz-audio" src="{{ question.audio }}"></audio>
+                </div>
+                {% endif %}
+
                 {% if question.content %}
                     <h4 class="fw-bold text-dark mb-4" style="letter-spacing: 2px;">{{ question.content }}</h4>
                 {% endif %}
@@ -115,6 +125,7 @@
      data-card-id="{{ question.card_id }}"
      data-topic-id="{{ topic_id }}"
      data-vocab-id="{{ question.vocabulary_id }}"
+     data-question-type="{{ question.type }}"
      style="display:none;"></div>
 
 <script src="{% static 'study/js/study_page.js' %}"></script>
