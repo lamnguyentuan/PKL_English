@@ -1,25 +1,123 @@
 {% extends "base.html" %} {% block content %}
 <div class="container py-5">
-  <h2 class="mb-4 fw-bold">Chủ đề luyện nói</h2>
-  <div class="row">
+  <div class="row align-items-center mb-5">
+    <div class="col-lg-3">
+      <h2 class="fw-bold m-0">Luyện nói</h2>
+    </div>
+    <div class="col-lg-6 my-3 my-lg-0">
+      <div class="input-group shadow-sm rounded-pill overflow-hidden">
+        <span class="input-group-text bg-white border-end-0 ps-4">
+          <i class="fas fa-search text-muted"></i>
+        </span>
+        <input
+          type="text"
+          id="searchInput"
+          class="form-control border-start-0 ps-0 py-2 shadow-none"
+          placeholder="Tìm kiếm chủ đề nhanh..."
+        />
+      </div>
+    </div>
+    <div class="col-lg-3 text-lg-end">
+      <a
+        href="{% url 'saved_topics' %}"
+        class="btn btn-outline-warning rounded-pill px-4 fw-bold shadow-sm"
+      >
+        <i class="fas fa-star me-2"></i>Chủ đề đã lưu
+      </a>
+    </div>
+  </div>
+
+  <div class="row" id="topicContainer">
     {% for topic in topics %}
-    <div class="col-md-4 mb-4">
-      <div class="card h-100 shadow-sm">
+    <div class="col-md-4 mb-4 topic-card">
+      <div
+        class="card h-100 shadow-sm border-0 rounded-4 overflow-hidden position-relative"
+      >
+        <div class="position-absolute top-0 end-0 p-3" style="z-index: 10">
+          <button
+            class="btn btn-light rounded-circle shadow-sm save-topic-btn"
+            data-id="{{ topic.id }}"
+          >
+            <i
+              class="{% if request.user in topic.users_who_saved.all %}fas{% else %}far{% endif %} fa-star text-warning fs-5"
+            ></i>
+          </button>
+        </div>
         {% if topic.image %}
-        <img src="{{ topic.image.url }}" class="card-img-top" alt="..." />
+        <img
+          src="{{ topic.image.url }}"
+          class="card-img-top"
+          style="height: 200px; object-fit: cover"
+        />
         {% endif %}
-        <div class="card-body">
-          <h5 class="card-title fw-bold">{{ topic.title }}</h5>
-          <p class="card-text text-muted">{{ topic.description }}</p>
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title fw-bold topic-title">{{ topic.title }}</h5>
+          <p class="card-text text-muted flex-grow-1 topic-desc">
+            {{ topic.description|truncatewords:20 }}
+          </p>
           <a
             href="{% url 'sentence_list' topic.id %}"
-            class="btn btn-primary w-100"
+            class="btn btn-primary w-100 rounded-pill mt-3 fw-bold"
             >Khám phá</a
           >
         </div>
       </div>
     </div>
+    {% empty %}
+    <div class="col-12 text-center py-5">
+      <p class="text-muted fs-5">Hiện chưa có chủ đề nào.</p>
+    </div>
     {% endfor %}
   </div>
+
+  <div id="noResults" class="text-center py-5" style="display: none">
+    <i class="fas fa-search fa-3x text-light mb-3"></i>
+    <p class="text-muted fs-5">Không tìm thấy chủ đề nào khớp với từ khóa.</p>
+  </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      // 1. Xử lý Tìm kiếm Real-time
+      const searchInput = document.getElementById('searchInput');
+      const topicCards = document.querySelectorAll('.topic-card');
+      const noResults = document.getElementById('noResults');
+
+      searchInput.addEventListener('input', function() {
+          const term = this.value.toLowerCase().trim();
+          let hasResults = false;
+
+          topicCards.forEach(card => {
+              const title = card.querySelector('.topic-title').innerText.toLowerCase();
+              const desc = card.querySelector('.topic-desc').innerText.toLowerCase();
+              if (title.includes(term) || desc.includes(term)) {
+                  card.style.display = "";
+                  hasResults = true;
+              } else {
+                  card.style.display = "none";
+              }
+          });
+          noResults.style.display = hasResults ? "none" : "block";
+      });
+
+      // 2. Xử lý Lưu chủ đề
+      document.querySelectorAll('.save-topic-btn').forEach(btn => {
+          btn.onclick = async function(e) {
+              e.preventDefault();
+              {% if not request.user.is_authenticated %}
+                  alert("Vui lòng đăng nhập!");
+                  return;
+              {% endif %}
+              const topicId = this.getAttribute('data-id');
+              const icon = this.querySelector('i');
+              const resp = await fetch(`/speaking/toggle-save/${topicId}/`, { headers: {'X-Requested-With': 'XMLHttpRequest'} });
+              const data = await resp.json();
+              if (data.status === 'success') {
+                  icon.classList.toggle('fas', data.saved);
+                  icon.classList.toggle('far', !data.saved);
+              }
+          };
+      });
+  });
+</script>
 {% endblock %}

@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.contrib.auth.models import User
 
 class SpeakingTopic(models.Model):
     # Tất cả các dòng dưới đây phải thụt lề vào
@@ -7,6 +8,11 @@ class SpeakingTopic(models.Model):
     description = models.TextField(blank=True, verbose_name="Mô tả")
     image = models.ImageField(upload_to='speaking_topics/', null=True, blank=True, verbose_name="Hình ảnh minh họa")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Ngày tạo")
+    users_who_saved = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, 
+        related_name='saved_topics', 
+        blank=True
+    )
 
     def __str__(self):
         return self.title
