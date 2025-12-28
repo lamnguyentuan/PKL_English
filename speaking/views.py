@@ -1,53 +1,110 @@
-from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
+from rest_framework import viewsets, status, permissions
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
+from django.shortcuts import get_object_or_404
+import random
+import time
+
 from .models import SpeakingTopic, SpeakingSentence, PronunciationLog
-from .services.services import AzureSpeechService
+from .serializers import (
+    SpeakingTopicSerializer, 
+    SpeakingTopicDetailSerializer,
+    SubmitPronunciationSerializer,
+    PronunciationResultSerializer
+)
 
-# Trang 1: Danh sách Topic
-def topic_list(request):
-    topics = SpeakingTopic.objects.all()
-    return render(request, 'speaking/topic_list.html', {'topics': topics})
+# Thử import service cũ của bạn. 
+# Nếu chưa refactor thư mục services, bạn có thể tạm comment dòng này và dùng Mock AI bên dưới.
+try:
+    from .services.services import AzureSpeechService
+except ImportError:
+    AzureSpeechService = None
 
-# Trang 2: Danh sách Câu trong Topic
-def sentence_list(request, topic_id):
-    topic = get_object_or_404(SpeakingTopic, id=topic_id)
-    sentences = topic.sentences.all()
-    return render(request, 'speaking/sentence_list.html', {'topic': topic, 'sentences': sentences})
+# --- 1. API: DANH SÁCH & CHI TIẾT CHỦ ĐỀ ---
+class SpeakingTopicViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    - GET /api/speaking/topics/ -> Lấy danh sách (Giống topic_list cũ)
+    - GET /api/speaking/topics/{id}/ -> Lấy chi tiết kèm câu hỏi (Giống sentence_list cũ)
+    """
+    queryset = SpeakingTopic.objects.all().order_by('-created_at')
+    
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return SpeakingTopicDetailSerializer
+        return SpeakingTopicSerializer
 
-# Trang 3: Phòng luyện tập (Chứa cả logic trang 4)
-def practice_sentence(request, sentence_id):
-    sentence = get_object_or_404(SpeakingSentence, id=sentence_id)
-    # Tìm câu tiếp theo
-    next_sentence = SpeakingSentence.objects.filter(topic=sentence.topic, id__gt=sentence.id).first()
-    return render(request, 'speaking/practice.html', {
-        'sentence': sentence, 
-        'next_sentence': next_sentence
-    })
 
-# API xử lý ghi âm (Gọi từ AJAX)
-def submit_pronunciation(request):
-    if request.method == 'POST':
-        sentence_id = request.POST.get('sentence_id')
-        audio_data = request.FILES.get('audio_data')
-        sentence = get_object_or_404(SpeakingSentence, id=sentence_id)
+# --- 2. API: NỘP BÀI GHI ÂM (Thay thế submit_pronunciation) ---
+class SubmitPronunciationView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser] # Để nhận file âm thanh upload
 
-        # Tạo log tạm để lấy file vật lý
-        log = PronunciationLog.objects.create(
-            user=request.user,
-            sentence=sentence,
-            audio_file=audio_data
-        )
-
-        # Gọi Azure
-        result = AzureSpeechService.assess_pronunciation(log.audio_file.path, sentence.text)
-
-        if result['success']:
-            log.overall_score = result['overall_score']
-            log.accuracy_score = result['accuracy_score']
-            log.fluency_score = result['fluency_score']
-            log.completeness_score = result['completeness_score']
-            log.api_response = result['full_response']
-            log.save()
-            return JsonResponse({"status": "success", "data": result})
+    def post(self, request, *args, **kwargs):
+        serializer = SubmitPronunciationSerializer(data=request.data)
         
-        return JsonResponse({"status": "error", "message": "API Error"}, status=500)
+        if serializer.is_valid():
+            sentence_id = serializer.validated_data['sentence_id']
+            audio_file = serializer.validated_data['audio_data']
+            
+            sentence = get_object_or_404(SpeakingSentence, id=sentence_id)
+
+            # BƯỚC 1: Tạo log tạm để lưu file vật lý xuống ổ cứng
+            # (Azure cần đường dẫn file thực tế)
+            log = PronunciationLog.objects.create(
+                user=request.user,
+                sentence=sentence,
+                audio_file=audio_file,
+                overall_score=0 # Điểm tạm
+            )
+
+            # BƯỚC 2: Gọi Azure Service (Logic cũ của bạn)
+            if AzureSpeechService:
+                try:
+                    # Gọi hàm assess_pronunciation từ code cũ của bạn
+                    result = AzureSpeechService.assess_pronunciation(log.audio_file.path, sentence.text)
+                except Exception as e:
+                    # Nếu lỗi Azure, trả về lỗi server
+                    print(f"Azure Error: {e}")
+                    return Response({"error": "Lỗi kết nối Azure AI"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            else:
+                # Nếu không có AzureService (lúc test), dùng Mock AI
+                result = self.mock_ai_scoring(sentence.text)
+
+            # BƯỚC 3: Cập nhật kết quả vào DB
+            if result.get('success', False) or 'overall_score' in result:
+                # Lưu ý: Cần map đúng key trả về từ Service của bạn
+                log.overall_score = result.get('overall_score', 0)
+                log.accuracy_score = result.get('accuracy_score', 0)
+                log.fluency_score = result.get('fluency_score', 0)
+                log.completeness_score = result.get('completeness_score', 0)
+                log.api_response = result.get('full_response', result)
+                log.save()
+
+                # BƯỚC 4: Trả kết quả JSON về cho Frontend
+                response_data = {
+                    'success': True,
+                    'overall_score': log.overall_score,
+                    'accuracy_score': log.accuracy_score,
+                    'fluency_score': log.fluency_score,
+                    'completeness_score': log.completeness_score,
+                    'full_response': log.api_response
+                }
+                return Response(response_data, status=status.HTTP_200_OK)
+            else:
+                return Response({"status": "error", "message": "Không nhận diện được âm thanh"}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def mock_ai_scoring(self, text):
+        """Hàm giả lập nếu chưa cấu hình Azure"""
+        time.sleep(1)
+        overall = round(random.uniform(60, 100), 1)
+        return {
+            "success": True,
+            "overall_score": overall,
+            "accuracy_score": round(random.uniform(overall - 5, 100), 1),
+            "fluency_score": round(random.uniform(60, 95), 1),
+            "completeness_score": 100.0,
+            "full_response": {"mock": "Dữ liệu giả lập (Chưa import AzureSpeechService)"}
+        }

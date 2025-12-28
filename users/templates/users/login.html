@@ -1,26 +1,89 @@
 {% extends "base.html" %}
-{% load crispy_forms_tags %}
+{% load static %}
 
 {% block content %}
 <div class="row justify-content-center mt-5">
     <div class="col-md-6 col-lg-4">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h3 class="text-center mb-4">Đăng nhập</h3>
-                <form method="POST">
-                    {% csrf_token %}
-                    {{ form|crispy }}
-                    <div class="d-grid mt-3">
-                        <button class="btn btn-primary" type="submit">Đăng nhập</button>
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <h3 class="text-center mb-4 fw-bold text-primary">Đăng nhập</h3>
+                
+                <div id="error-message" class="alert alert-danger d-none"></div>
+
+                <form id="login-form" onsubmit="handleLogin(event)">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Tên đăng nhập</label>
+                        <input type="text" class="form-control" id="username" placeholder="Nhập username" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Mật khẩu</label>
+                        <input type="password" class="form-control" id="password" placeholder="Nhập mật khẩu" required>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button class="btn btn-primary py-2 fw-bold" type="submit" id="btn-login">
+                            Đăng nhập
+                        </button>
                     </div>
                 </form>
+
                 <div class="border-top pt-3 mt-3 text-center">
                     <small class="text-muted">
-                        Chưa có tài khoản? <a href="{% url 'register' %}" class="ml-2">Đăng ký ngay</a>
+                        Chưa có tài khoản? <a href="{% url 'register' %}" class="ms-1 fw-bold text-decoration-none">Đăng ký ngay</a>
                     </small>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    function handleLogin(event) {
+        event.preventDefault(); // Chặn reload trang
+
+        // 1. Lấy dữ liệu
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const btn = document.getElementById('btn-login');
+        const errorDiv = document.getElementById('error-message');
+
+        // Hiệu ứng loading
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+        errorDiv.classList.add('d-none');
+
+        // 2. Gọi API
+        fetch('/api/login/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken') // Hàm này đã có ở base.html
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                // Đăng nhập thành công -> Chuyển hướng về trang chủ
+                window.location.href = "/"; 
+            } else {
+                return response.json().then(data => {
+                    throw new Error(data.non_field_errors || "Đăng nhập thất bại");
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Lỗi:', error);
+            errorDiv.innerText = error.message;
+            errorDiv.classList.remove('d-none');
+            
+            // Reset nút bấm
+            btn.disabled = false;
+            btn.innerText = 'Đăng nhập';
+        });
+    }
+</script>
 {% endblock content %}

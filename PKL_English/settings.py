@@ -49,6 +49,21 @@ INSTALLED_APPS = [
     'study.apps.StudyConfig',
     'speaking.apps.SpeakingConfig',
 ]
+# --- CẤU HÌNH DRF ---
+REST_FRAMEWORK = {
+    # Sử dụng SessionAuthentication để tận dụng Cookie đăng nhập của Django
+    # Điều này giúp trình duyệt tự động gửi Cookie 'sessionid' khi gọi API fetch()
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ],
+    
+    # Mặc định: Cho phép ai cũng gọi API (trừ khi View cụ thể có ghi permission_classes=[IsAuthenticated])
+    # Nếu bạn muốn chặn toàn bộ, sửa thành 'rest_framework.permissions.IsAuthenticated'
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -165,7 +180,7 @@ AUTH_USER_MODEL = 'users.User'
 
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
-
+LOGIN_URL = 'login' 
 MEDIA_URL = '/media/'  
 MEDIA_ROOT = BASE_DIR / 'media'
 

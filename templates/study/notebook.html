@@ -6,89 +6,29 @@
     <div class="col-md-8">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="fw-bold"><i class="fas fa-book me-2"></i>Sổ tay từ vựng</h3>
-            <div class="d-flex gap-2 align-items-center">
-                <span class="badge bg-primary fs-6">{{ entries|length }} từ</span>
-                {% if entries|length >= 2 %}
-                <a href="{% url 'notebook_review' %}" class="btn btn-warning btn-sm">
-                    <i class="fas fa-headphones me-1"></i>Ôn tập
-                </a>
-                {% endif %}
+            <div class="d-flex gap-2 align-items-center" id="header-actions">
+                <span class="badge bg-secondary fs-6">Đang tải...</span>
             </div>
         </div>
 
-        {% if entries %}
-        <div class="d-flex flex-column gap-3">
-            {% for entry in entries %}
-            <div class="card p-3 shadow-sm" id="entry-{{ entry.vocabulary_id }}">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <h4 class="fw-bold text-primary mb-0">{{ entry.word }}</h4>
-                            <span class="text-muted fst-italic">/{{ entry.phonetic }}/</span>
-                            {% if entry.audio %}
-                            <button onclick="playAudio(this)" data-src="/media/{{ entry.audio }}" 
-                                    class="btn btn-sm btn-outline-warning rounded-circle">
-                                <i class="fas fa-volume-up"></i>
-                            </button>
-                            {% endif %}
-                        </div>
-                        <p class="text-dark mb-1">{{ entry.meaning_sentence }}</p>
-                        <small class="text-muted">
-                            <i class="fas fa-folder me-1"></i>{{ entry.topic_title }}
-                        </small>
-                        
-                        <!-- Ghi chú -->
-                        <div class="mt-2">
-                            <div class="note-display {% if not entry.note %}d-none{% endif %}" id="note-display-{{ entry.vocabulary_id }}">
-                                <div class="p-2 bg-light rounded d-flex justify-content-between align-items-center">
-                                    <small class="text-secondary"><i class="fas fa-sticky-note me-1"></i><span class="note-text">{{ entry.note }}</span></small>
-                                    <button onclick="showEditNote('{{ entry.vocabulary_id }}')" class="btn btn-sm btn-link text-muted p-0">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="note-edit d-none" id="note-edit-{{ entry.vocabulary_id }}">
-                                <div class="input-group">
-                                    <input type="text" class="form-control form-control-sm" 
-                                           id="note-input-{{ entry.vocabulary_id }}" 
-                                           value="{{ entry.note }}" placeholder="Thêm ghi chú...">
-                                    <button onclick="saveNote('{{ entry.vocabulary_id }}')" class="btn btn-sm btn-primary">Lưu</button>
-                                    <button onclick="cancelEditNote('{{ entry.vocabulary_id }}')" class="btn btn-sm btn-outline-secondary">Hủy</button>
-                                </div>
-                            </div>
-                            <button onclick="showEditNote('{{ entry.vocabulary_id }}')" 
-                                    class="btn btn-sm btn-link text-muted p-0 add-note-btn {% if entry.note %}d-none{% endif %}" 
-                                    id="add-note-btn-{{ entry.vocabulary_id }}">
-                                <i class="fas fa-plus me-1"></i>Thêm ghi chú
-                            </button>
-                        </div>
-                    </div>
-                    <button onclick="removeEntry('{{ entry.vocabulary_id }}')" class="btn btn-outline-danger btn-sm ms-3">
-                        <i class="fas fa-trash"></i>
-                    </button>
+        <div id="notebook-list" class="d-flex flex-column gap-3">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
                 </div>
             </div>
-            {% endfor %}
         </div>
-        {% else %}
-        <div class="text-center text-muted py-5">
+
+        <div id="empty-state" class="d-none text-center text-muted py-5">
             <i class="fas fa-book-open fa-4x mb-3"></i>
             <h5>Sổ tay trống</h5>
             <p>Thêm từ vựng vào sổ tay khi học để ôn tập sau!</p>
-            <a href="{% url 'topic_list' %}" class="btn btn-primary">Bắt đầu học</a>
+            <a href="/" class="btn btn-primary">Bắt đầu học</a>
         </div>
-        {% endif %}
     </div>
 </div>
 
 <audio id="audio-player"></audio>
-
-<!-- Data container for JavaScript -->
-<div id="notebook-data" 
-     data-remove-url="{% url 'remove_from_notebook' %}"
-     data-update-url="{% url 'update_notebook' %}"
-     data-csrf="{{ csrf_token }}"
-     style="display:none;"></div>
 
 <script src="{% static 'study/js/notebook.js' %}"></script>
 {% endblock %}

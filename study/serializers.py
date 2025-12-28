@@ -14,15 +14,33 @@ class VocabularySerializer(serializers.ModelSerializer):
 class TopicSerializer(serializers.ModelSerializer):
     """Serializer for Topic"""
     vocabulary_count = serializers.SerializerMethodField()
+    progress = serializers.SerializerMethodField() 
     
     class Meta:
         model = Topic
-        fields = ['id', 'title', 'description', 'image', 'vocabulary_count', 'created_at']
+        fields = ['id', 'title', 'description', 'image', 'vocabulary_count', 'created_at', 'progress']
         read_only_fields = ['id', 'created_at']
     
     def get_vocabulary_count(self, obj):
         return obj.vocabularies.count()
-
+    
+    def get_progress(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return 0
+            
+        
+        total_vocab = Vocabulary.objects.filter(topic=obj).count()
+        if total_vocab == 0:
+            return 0
+            
+        mastered = Flashcard.objects.filter(
+            user=request.user,
+            vocabulary__topic=obj,
+            mastery_level__gte=3
+        ).count()
+        
+        return int((mastered / total_vocab) * 100)
 
 class TopicDetailSerializer(TopicSerializer):
     """Serializer for Topic with vocabularies"""

@@ -1,34 +1,33 @@
 """
 URL configuration for PKL_English project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from study.views import index, topic_list, study_session, submit_answer, study_stats
+
+# 1. Import view của trang chủ từ app Study
+from study import views_front as study_views
+
 admin.site.site_header = "Hệ thống quản lý PKL English"
 admin.site.site_title = "PKL English Admin Portal"
 admin.site.index_title = "Chào mừng đến với trang quản trị nội dung"
+
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', index, name='home'),
+
+    # --- ƯU TIÊN SỐ 1: TRANG CHỦ ---
+    # Đặt dòng này lên đầu để chắc chắn vào '/' là ra trang web, không ra API
+    path('', study_views.home_page, name='home'),
+
+    # --- CÁC APP KHÁC ---
+    # (Thứ tự dưới này không còn quá quan trọng với trang chủ nữa)
     path('', include('users.urls')),
-    # Study URLs
-    path('study/', include('study.urls')),
-    path('speaking/', include('speaking.urls')),
+    path('', include('speaking.urls')),
+    
+    # Study App (Chứa các link con như /study/..., /api/topics/...)
+    path('', include('study.urls')),
 ]
+
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

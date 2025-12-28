@@ -1,28 +1,110 @@
 {% extends "base.html" %}
-{% load crispy_forms_tags %}
+{% load static %}
 
 {% block content %}
 <div class="row justify-content-center mt-5">
-    <div class="col-md-6 col-lg-4">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h3 class="text-center mb-4">Đăng ký tài khoản</h3>
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <h3 class="text-center mb-4 fw-bold text-success">Đăng ký tài khoản</h3>
                 
-                <form method="POST">
-                    {% csrf_token %}
-                    {{ form|crispy }}
-                    <div class="d-grid mt-3">
-                        <button class="btn btn-primary" type="submit">Đăng ký</button>
+                <div id="reg-error" class="alert alert-danger d-none"></div>
+
+                <form id="register-form" onsubmit="handleRegister(event)">
+                    
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Tên đăng nhập *</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email (Tùy chọn)</label>
+                        <input type="email" class="form-control" id="email">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Mật khẩu *</label>
+                        <input type="password" class="form-control" id="password" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Xác nhận mật khẩu *</label>
+                        <input type="password" class="form-control" id="confirm_password" required>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button class="btn btn-success py-2 fw-bold" type="submit" id="btn-register">
+                            Đăng ký
+                        </button>
                     </div>
                 </form>
-                
+
                 <div class="border-top pt-3 mt-3 text-center">
                     <small class="text-muted">
-                        Đã có tài khoản? <a href="{% url 'login' %}" class="ml-2">Đăng nhập</a>
+                        Đã có tài khoản? <a href="{% url 'login' %}" class="ms-1 fw-bold text-decoration-none">Đăng nhập</a>
                     </small>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    function handleRegister(event) {
+        event.preventDefault();
+
+        const username = document.getElementById('username').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        
+        const btn = document.getElementById('btn-register');
+        const errorDiv = document.getElementById('reg-error');
+
+        // Validate cơ bản phía Client
+        if (password !== confirmPassword) {
+            errorDiv.innerText = "Mật khẩu xác nhận không khớp!";
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+        errorDiv.classList.add('d-none');
+
+        fetch('/api/register/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                username: username,
+                email: email,
+                password: password,
+                confirm_password: confirmPassword
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                // Đăng ký thành công -> Về trang chủ (vì backend đã auto login)
+                alert("Đăng ký thành công!");
+                window.location.href = "/";
+            } else {
+                return response.json().then(data => {
+                    // Lấy lỗi đầu tiên từ object lỗi trả về
+                    const firstError = Object.values(data)[0]; 
+                    throw new Error(firstError);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Lỗi:', error);
+            errorDiv.innerText = error.message;
+            errorDiv.classList.remove('d-none');
+            btn.disabled = false;
+            btn.innerText = 'Đăng ký';
+        });
+    }
+</script>
 {% endblock content %}

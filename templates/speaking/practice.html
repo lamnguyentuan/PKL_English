@@ -1,312 +1,405 @@
-{% extends "base.html" %} {% block content %}
-<div class="container py-5">
-  <div id="practice-area" class="text-center" style="transition: opacity 0.3s">
-    <h1 class="display-4 fw-bold mb-4">
-      <span id="target-text">{{ sentence.text }}</span>
-      <button
-        onclick="playNativeSample('{{ sentence.text }}')"
-        class="btn btn-link text-primary p-0 ms-2"
-      >
-        <i class="fas fa-volume-up fa-sm"></i>
-      </button>
-    </h1>
-    <p class="fs-4 text-muted mb-5">"{{ sentence.translation }}"</p>
+{% extends "base.html" %}
+{% load static %}
 
-    <div class="record-wrapper mb-4">
-      <button
-        id="recordBtn"
-        class="btn btn-danger btn-lg p-5 rounded-circle shadow-lg"
-      >
-        <i class="fas fa-microphone fa-3x" id="mic-icon"></i>
-      </button>
-      <h4 class="mt-4 fw-bold" id="status-text">Bấm nút để bắt đầu nói</h4>
-    </div>
-    <p class="text-secondary small">
-      Mẹo: Hãy nói to, rõ ràng và nhấn trọng âm đúng từ.
-    </p>
-  </div>
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="{% url 'speaking_topics' %}" class="btn btn-outline-secondary rounded-pill">
+            <i class="fas fa-arrow-left me-2"></i>Danh sách chủ đề
+        </a>
+        <h5 class="fw-bold text-primary m-0" id="topic-title">Đang tải chủ đề...</h5>
+        <div style="width: 100px;"></div> </div>
 
-  <div
-    id="result-area"
-    style="display: none; opacity: 0; transition: opacity 0.5s"
-  >
-    <div class="card shadow-lg border-0 p-4 rounded-4">
-      <div class="row align-items-center">
-        <div class="col-md-5 text-center border-end">
-          <div class="score-circle mb-4">
-            <h1 class="display-1 fw-bold text-primary mb-0" id="total-score">
-              0
-            </h1>
-            <span class="text-muted fw-bold">ĐIỂM TỔNG</span>
-          </div>
+    <div id="practice-area" class="text-center" style="transition: opacity 0.3s">
+        <p class="text-muted small mb-2">Câu <span id="current-index">0</span> / <span id="total-count">0</span></p>
 
-          <h5 class="text-muted mb-3">Phát âm thực tế của bạn:</h5>
-          <div
-            id="word-feedback"
-            class="fs-2 mb-4 p-3 bg-light rounded-3 shadow-sm"
-          ></div>
+        <h1 class="display-4 fw-bold mb-4">
+            <span id="target-text">...</span>
+            <button onclick="playNativeSample()" class="btn btn-link text-primary p-0 ms-2" title="Nghe mẫu">
+                <i class="fas fa-volume-up fa-sm"></i>
+            </button>
+        </h1>
+        <p class="fs-4 text-muted mb-5" id="target-translation">...</p>
+
+        <div class="record-wrapper mb-4">
+            <button id="recordBtn" class="btn btn-danger btn-lg p-5 rounded-circle shadow-lg">
+                <i class="fas fa-microphone fa-3x" id="mic-icon"></i>
+            </button>
+            <h4 class="mt-4 fw-bold" id="status-text">Bấm nút để bắt đầu nói</h4>
         </div>
+        
+        <audio id="audioPlayback" style="display: none"></audio>
+        
+        <p class="text-secondary small">
+            Mẹo: Hãy nói to, rõ ràng và nhấn trọng âm đúng từ.
+        </p>
 
-        <div class="col-md-7 ps-md-5">
-          <h3 class="fw-bold mb-4 text-dark">
-            <i class="fas fa-chart-line me-2"></i>Phân tích AI
-          </h3>
-
-          <div class="mb-4">
-            <div class="d-flex justify-content-between mb-2">
-              <span class="fw-bold"
-                ><i class="fas fa-bullseye me-2 text-success"></i>Độ chính xác
-                (Accuracy)</span
-              >
-              <span id="accuracy-val" class="badge bg-success">0%</span>
-            </div>
-            <div class="progress" style="height: 12px">
-              <div
-                id="accuracy-bar"
-                class="progress-bar bg-success progress-bar-striped progress-bar-animated"
-                role="progressbar"
-                style="width: 0%"
-              ></div>
-            </div>
-          </div>
-
-          <div class="mb-4">
-            <div class="d-flex justify-content-between mb-2">
-              <span class="fw-bold"
-                ><i class="fas fa-wind me-2 text-info"></i>Độ lưu loát
-                (Fluency)</span
-              >
-              <span id="fluency-val" class="badge bg-info">0%</span>
-            </div>
-            <div class="progress" style="height: 12px">
-              <div
-                id="fluency-bar"
-                class="progress-bar bg-info progress-bar-striped progress-bar-animated"
-                role="progressbar"
-                style="width: 0%"
-              ></div>
-            </div>
-          </div>
-
-          <div class="mb-5">
-            <div class="d-flex justify-content-between mb-2">
-              <span class="fw-bold"
-                ><i class="fas fa-check-double me-2 text-warning"></i>Độ trọn
-                vẹn (Completeness)</span
-              >
-              <span id="completeness-val" class="badge bg-warning text-dark"
-                >0%</span
-              >
-            </div>
-            <div class="progress" style="height: 12px">
-              <div
-                id="completeness-bar"
-                class="progress-bar bg-warning"
-                role="progressbar"
-                style="width: 0%"
-              ></div>
-            </div>
-          </div>
-
-          <div class="row g-2 mb-3">
-            <div class="col-6">
-              <button
-                onclick="location.reload()"
-                class="btn btn-outline-primary btn-lg w-100"
-              >
-                <i class="fas fa-redo me-2"></i>Luyện lại
-              </button>
-            </div>
-            <div class="col-6">
-              {% if next_sentence %}
-              <a
-                href="{% url 'practice_sentence' next_sentence.id %}"
-                class="btn btn-success btn-lg w-100"
-              >
-                Tiếp theo <i class="fas fa-arrow-right ms-2"></i>
-              </a>
-              {% else %}
-              <a
-                href="{% url 'speaking_topics' %}"
-                class="btn btn-primary btn-lg w-100"
-                >Xong Topic</a
-              >
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="row g-2">
-            <div class="col-6">
-              <button id="playRecordingBtn" class="btn btn-dark w-100">
-                <i class="fas fa-user-voice me-2"></i>Giọng của bạn
-              </button>
-            </div>
-            <div class="col-6">
-              <button
-                onclick="playNativeSample('{{ sentence.text }}')"
-                class="btn btn-info text-white w-100"
-              >
-                <i class="fas fa-robot me-2"></i>Giọng máy đọc
-              </button>
-            </div>
-          </div>
+        <div class="d-flex justify-content-center gap-3 mt-5">
+            <button id="btn-prev" class="btn btn-outline-secondary px-4 rounded-pill" disabled>
+                <i class="fas fa-chevron-left me-2"></i>Trước
+            </button>
+            <button id="btn-next" class="btn btn-outline-primary px-4 rounded-pill" disabled>
+                Sau <i class="fas fa-chevron-right ms-2"></i>
+            </button>
         </div>
-      </div>
     </div>
-  </div>
+
+    <div id="result-area" style="display: none; opacity: 0; transition: opacity 0.5s">
+        <div class="card shadow-lg border-0 p-4 rounded-4">
+            <div class="row align-items-center">
+                
+                <div class="col-md-5 text-center border-end">
+                    <div class="score-circle mb-4">
+                        <h1 class="display-1 fw-bold text-primary mb-0" id="total-score">0</h1>
+                        <span class="text-muted fw-bold">ĐIỂM TỔNG</span>
+                    </div>
+
+                    <h5 class="text-muted mb-3">Phát âm thực tế của bạn:</h5>
+                    <div id="word-feedback" class="fs-4 mb-4 p-3 bg-light rounded-3 shadow-sm text-start" style="line-height: 1.6;">
+                        </div>
+                </div>
+
+                <div class="col-md-7 ps-md-5">
+                    <h3 class="fw-bold mb-4 text-dark">
+                        <i class="fas fa-chart-line me-2"></i>Phân tích AI
+                    </h3>
+
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="fw-bold"><i class="fas fa-bullseye me-2 text-success"></i>Độ chính xác</span>
+                            <span id="accuracy-val" class="badge bg-success">0%</span>
+                        </div>
+                        <div class="progress" style="height: 12px">
+                            <div id="accuracy-bar" class="progress-bar bg-success progress-bar-striped" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="fw-bold"><i class="fas fa-wind me-2 text-info"></i>Độ lưu loát</span>
+                            <span id="fluency-val" class="badge bg-info">0%</span>
+                        </div>
+                        <div class="progress" style="height: 12px">
+                            <div id="fluency-bar" class="progress-bar bg-info progress-bar-striped" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-5">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="fw-bold"><i class="fas fa-check-double me-2 text-warning"></i>Độ trọn vẹn</span>
+                            <span id="completeness-val" class="badge bg-warning text-dark">0%</span>
+                        </div>
+                        <div class="progress" style="height: 12px">
+                            <div id="completeness-bar" class="progress-bar bg-warning" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <button onclick="retrySentence()" class="btn btn-outline-primary btn-lg w-100">
+                                <i class="fas fa-redo me-2"></i>Luyện lại
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button onclick="nextSentence()" class="btn btn-success btn-lg w-100" id="btn-next-result">
+                                Tiếp theo <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button id="playRecordingBtn" class="btn btn-dark w-100">
+                                <i class="fas fa-user-voice me-2"></i>Nghe lại giọng bạn
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button onclick="playNativeSample()" class="btn btn-info text-white w-100">
+                                <i class="fas fa-robot me-2"></i>Nghe mẫu
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<audio id="audioPlayback" style="display: none"></audio>
-
 <script>
-  let mediaRecorder;
-  let audioChunks = [];
-  let recordingUrl = null;
-  const recordBtn = document.getElementById("recordBtn");
-  const statusText = document.getElementById("status-text");
-  const micIcon = document.getElementById("mic-icon");
+    // --- KHỞI TẠO BIẾN ---
+    const TOPIC_ID = "{{ topic_id }}"; // Lấy ID từ Django View render ra
+    let sentences = [];
+    let currentIndex = 0;
+    
+    let mediaRecorder;
+    let audioChunks = [];
+    let recordingUrl = null;
 
-  // 1. Hàm nghe máy đọc mẫu
-  function playNativeSample(text) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
-    utterance.rate = 0.85;
-    window.speechSynthesis.speak(utterance);
-  }
-
-  // 2. Logic Ghi âm
-  recordBtn.onclick = async () => {
-    if (mediaRecorder && mediaRecorder.state === "recording") {
-      mediaRecorder.stop();
-      statusText.innerText = "Đang phân tích giọng nói của bạn...";
-      recordBtn.classList.remove("btn-pulse");
-      micIcon.className = "fas fa-spinner fa-spin fa-3x";
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
-      audioChunks = [];
-
-      mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
-
-        // Tạo URL để nghe lại
-        if (recordingUrl) URL.revokeObjectURL(recordingUrl);
-        recordingUrl = URL.createObjectURL(audioBlob);
-        document.getElementById("audioPlayback").src = recordingUrl;
-
-        const formData = new FormData();
-        formData.append("audio_data", audioBlob, "recording.wav");
-        formData.append("sentence_id", "{{ sentence.id }}");
-        formData.append("csrfmiddlewaretoken", "{{ csrf_token }}");
-
-        try {
-          const response = await fetch('{% url "submit_pronunciation" %}', {
-            method: "POST",
-            body: formData,
-          });
-          const result = await response.json();
-
-          if (result.status === "success") {
-            showResult(result.data);
-          } else {
-            alert("Lỗi: " + (result.message || "Không thể chấm điểm"));
-            resetUI();
-          }
-        } catch (err) {
-          console.error("Lỗi kết nối:", err);
-          alert(
-            "Không thể kết nối với Server. Kiểm tra lại Internet hoặc API Key."
-          );
-          resetUI();
-        }
-      };
-
-      mediaRecorder.start();
-      statusText.innerText = "Đang nghe... Bấm nút một lần nữa để dừng";
-      recordBtn.classList.add("btn-pulse");
-      micIcon.className = "fas fa-stop fa-3x";
-    } catch (err) {
-      alert("Vui lòng cho phép quyền truy cập Microphone.");
-    }
-  };
-
-  // 3. Hiển thị kết quả
-  function showResult(data) {
-    const exerciseArea = document.getElementById("practice-area");
+    // --- DOM ELEMENTS ---
+    const recordBtn = document.getElementById("recordBtn");
+    const statusText = document.getElementById("status-text");
+    const micIcon = document.getElementById("mic-icon");
+    const practiceArea = document.getElementById("practice-area");
     const resultArea = document.getElementById("result-area");
 
-    exerciseArea.style.opacity = "0";
+    // --- 1. LOAD DỮ LIỆU KHI TRANG TẢI ---
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchData();
 
-    setTimeout(() => {
-      exerciseArea.style.display = "none";
-      resultArea.style.display = "block";
-      setTimeout(() => {
-        resultArea.style.opacity = "1";
-      }, 50);
+        // Gắn sự kiện nút điều hướng
+        document.getElementById('btn-prev').onclick = () => changeIndex(-1);
+        document.getElementById('btn-next').onclick = () => changeIndex(1);
+    });
 
-      // Cập nhật điểm tổng
-      document.getElementById("total-score").innerText = Math.round(
-        data.overall_score
-      );
-
-      // Cập nhật các thanh progress
-      updateMetric("accuracy", data.accuracy_score);
-      updateMetric("fluency", data.fluency_score);
-      updateMetric("completeness", data.completeness_score);
-
-      // Bôi màu từng từ
-      const feedbackContainer = document.getElementById("word-feedback");
-      feedbackContainer.innerHTML = "";
-      data.full_response.Words.forEach((word) => {
-        const span = document.createElement("span");
-        span.innerText = word.Word + " ";
-        const score = word.PronunciationAssessment.AccuracyScore;
-
-        if (score >= 80) span.className = "text-success fw-bold";
-        else if (score >= 50) span.className = "text-warning fw-bold";
-        else span.className = "text-danger fw-bold";
-
-        feedbackContainer.appendChild(span);
-      });
-    }, 300);
-  }
-
-  function updateMetric(id, value) {
-    const roundVal = Math.round(value);
-    const bar = document.getElementById(id + "-bar");
-    const text = document.getElementById(id + "-val");
-    setTimeout(() => {
-      bar.style.width = roundVal + "%";
-      text.innerText = roundVal + "%";
-    }, 200);
-  }
-
-  // 4. Nghe lại giọng người dùng
-  document.getElementById("playRecordingBtn").onclick = () => {
-    const audio = document.getElementById("audioPlayback");
-    const btn = document.getElementById("playRecordingBtn");
-    if (audio.src) {
-      audio.play();
-      const originalText = btn.innerHTML;
-      btn.innerHTML = '<i class="fas fa-volume-up me-2"></i>Đang phát...';
-      btn.classList.add("disabled");
-      audio.onended = () => {
-        btn.innerHTML = originalText;
-        btn.classList.remove("disabled");
-      };
+    function fetchData() {
+        // Gọi API lấy chi tiết Topic và danh sách câu
+        fetch(`/api/speaking/topics/${TOPIC_ID}/`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('topic-title').innerText = data.title;
+                sentences = data.sentences; // Giả sử API trả về list sentences bên trong
+                
+                document.getElementById('total-count').innerText = sentences.length;
+                
+                if (sentences.length > 0) {
+                    loadSentence(0);
+                } else {
+                    statusText.innerText = "Chủ đề này chưa có câu nào.";
+                    recordBtn.disabled = true;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Không thể tải dữ liệu bài học.");
+            });
     }
-  };
 
-  function resetUI() {
-    statusText.innerText = "Bấm nút để bắt đầu nói";
-    micIcon.className = "fas fa-microphone fa-3x";
-    recordBtn.classList.remove("btn-pulse");
-  }
+    function loadSentence(index) {
+        currentIndex = index;
+        const s = sentences[index];
+
+        // Reset UI về trạng thái chưa ghi âm
+        practiceArea.style.display = 'block';
+        setTimeout(() => practiceArea.style.opacity = '1', 50);
+        resultArea.style.display = 'none';
+        resultArea.style.opacity = '0';
+        resetRecordUI();
+
+        // Điền dữ liệu text
+        document.getElementById('current-index').innerText = index + 1;
+        document.getElementById('target-text').innerText = s.text;
+        document.getElementById('target-translation').innerText = s.translation || '';
+
+        // Cập nhật trạng thái nút Next/Prev
+        document.getElementById('btn-prev').disabled = (index === 0);
+        document.getElementById('btn-next').disabled = (index === sentences.length - 1);
+        
+        // Cập nhật nút Next ở màn hình kết quả
+        const btnNextResult = document.getElementById('btn-next-result');
+        if (index === sentences.length - 1) {
+            btnNextResult.innerText = "Hoàn thành";
+            btnNextResult.onclick = () => window.location.href = "{% url 'speaking_topics' %}";
+        } else {
+            btnNextResult.innerHTML = 'Tiếp theo <i class="fas fa-arrow-right ms-2"></i>';
+            btnNextResult.onclick = nextSentence;
+        }
+    }
+
+    function changeIndex(step) {
+        const newIndex = currentIndex + step;
+        if (newIndex >= 0 && newIndex < sentences.length) {
+            loadSentence(newIndex);
+        }
+    }
+
+    function nextSentence() {
+        changeIndex(1);
+    }
+    
+    function retrySentence() {
+        // Chỉ cần ẩn kết quả, hiện lại practice area
+        resultArea.style.opacity = '0';
+        setTimeout(() => {
+            resultArea.style.display = 'none';
+            practiceArea.style.display = 'block';
+            setTimeout(() => practiceArea.style.opacity = '1', 50);
+            resetRecordUI();
+        }, 300);
+    }
+
+    // --- 2. XỬ LÝ TTS (Text to Speech) ---
+    function playNativeSample() {
+        const text = sentences[currentIndex].text;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "en-US";
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // --- 3. XỬ LÝ GHI ÂM & GỬI API ---
+    recordBtn.onclick = async () => {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+            statusText.innerText = "Đang chấm điểm...";
+            recordBtn.classList.remove("btn-pulse");
+            micIcon.className = "fas fa-spinner fa-spin fa-3x";
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
+
+                // Tạo URL để nghe lại
+                if (recordingUrl) URL.revokeObjectURL(recordingUrl);
+                recordingUrl = URL.createObjectURL(audioBlob);
+                document.getElementById("audioPlayback").src = recordingUrl;
+
+                // Chuẩn bị FormData gửi API
+                const formData = new FormData();
+                formData.append("audio_data", audioBlob, "recording.wav");
+                formData.append("sentence_id", sentences[currentIndex].id); // Lấy ID từ mảng JS
+
+                try {
+                    const response = await fetch('/api/speaking/submit/', {
+                        method: "POST",
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken') // Hàm lấy token bảo mật
+                        },
+                        body: formData,
+                    });
+                    const result = await response.json();
+
+                    if (result.success || result.overall_score) {
+                        showResult(result);
+                    } else {
+                        alert("Lỗi: " + (result.message || JSON.stringify(result)));
+                        resetRecordUI();
+                    }
+                } catch (err) {
+                    console.error("Lỗi API:", err);
+                    alert("Không thể kết nối Server.");
+                    resetRecordUI();
+                }
+            };
+
+            mediaRecorder.start();
+            statusText.innerText = "Đang nghe... Nhấn lại để dừng";
+            recordBtn.classList.add("btn-pulse");
+            micIcon.className = "fas fa-stop fa-3x";
+
+        } catch (err) {
+            console.error(err);
+            alert("Vui lòng cho phép quyền truy cập Microphone.");
+        }
+    };
+
+    // --- 4. HIỂN THỊ KẾT QUẢ ---
+    function showResult(data) {
+        // Hiệu ứng chuyển cảnh
+        practiceArea.style.opacity = "0";
+        setTimeout(() => {
+            practiceArea.style.display = "none";
+            resultArea.style.display = "block";
+            setTimeout(() => resultArea.style.opacity = "1", 50);
+
+            // Điền số liệu
+            document.getElementById("total-score").innerText = Math.round(data.overall_score);
+            updateMetric("accuracy", data.accuracy_score);
+            updateMetric("fluency", data.fluency_score);
+            updateMetric("completeness", data.completeness_score);
+
+            // Render từng từ (Word feedback)
+            const feedbackContainer = document.getElementById("word-feedback");
+            feedbackContainer.innerHTML = "";
+
+            // Kiểm tra cấu trúc JSON từ Azure (NBest -> Words) hoặc Mock AI
+            // Logic này phụ thuộc vào API response của bạn
+            let words = [];
+            if (data.full_response && data.full_response.Words) {
+                words = data.full_response.Words; // Cấu trúc Azure chuẩn
+            } else if (data.full_response && data.full_response.NBest) {
+                 words = data.full_response.NBest[0].Words; // Cấu trúc khác
+            } else {
+                // Fallback nếu không có chi tiết từ (ví dụ dùng Mock)
+                feedbackContainer.innerHTML = `<span class="text-primary">${sentences[currentIndex].text}</span>`;
+                return;
+            }
+
+            words.forEach((word) => {
+                const span = document.createElement("span");
+                span.innerText = word.Word + " ";
+                
+                // Logic tô màu
+                const score = word.PronunciationAssessment ? word.PronunciationAssessment.AccuracyScore : word.AccuracyScore;
+                
+                if (score >= 80) span.className = "text-success fw-bold";
+                else if (score >= 50) span.className = "text-warning fw-bold";
+                else span.className = "text-danger fw-bold text-decoration-underline";
+
+                // Tooltip điểm số (optional)
+                span.title = `Score: ${score}`;
+                feedbackContainer.appendChild(span);
+            });
+
+        }, 300);
+    }
+
+    function updateMetric(id, value) {
+        const roundVal = Math.round(value);
+        const bar = document.getElementById(id + "-bar");
+        const text = document.getElementById(id + "-val");
+        // Reset trước khi chạy animation
+        bar.style.width = "0%"; 
+        setTimeout(() => {
+            bar.style.width = roundVal + "%";
+            text.innerText = roundVal + "%";
+        }, 200);
+    }
+
+    // Nghe lại file ghi âm
+    document.getElementById("playRecordingBtn").onclick = () => {
+        const audio = document.getElementById("audioPlayback");
+        const btn = document.getElementById("playRecordingBtn");
+        if (audio.src) {
+            audio.play();
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-volume-up me-2"></i>Đang phát...';
+            btn.disabled = true;
+            audio.onended = () => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            };
+        }
+    };
+
+    function resetRecordUI() {
+        statusText.innerText = "Bấm nút để bắt đầu nói";
+        micIcon.className = "fas fa-microphone fa-3x";
+        recordBtn.classList.remove("btn-pulse");
+    }
+
+    // Hàm lấy CSRF Token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
 </script>
 
 <style>
@@ -327,20 +420,14 @@
     background-color: #ff4d4d !important;
   }
   @keyframes pulse {
-    0% {
-      box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.6);
-    }
-    70% {
-      box-shadow: 0 0 0 25px rgba(220, 53, 69, 0);
-    }
-    100% {
-      box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-    }
+    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.6); }
+    70% { box-shadow: 0 0 0 25px rgba(220, 53, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
   }
   #word-feedback span {
-    margin-right: 8px;
+    margin-right: 5px;
     display: inline-block;
-    transition: all 0.2s;
+    cursor: default;
   }
   .progress {
     background-color: #e9ecef;

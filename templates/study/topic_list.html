@@ -2,87 +2,133 @@
 {% load static %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-8">
-    <h3 class="fw-bold mb-4 text-center">Chọn chủ đề để học</h3>
-
-    <div class="d-flex flex-column gap-3">
-      {% for topic in topics %}
-      <a href="{% url 'study_session' topic.id %}" class="text-decoration-none">
-        <div class="card p-3 hover-effect">
-          <div class="d-flex align-items-center">
-            <div class="me-3">
-              {% if topic.image %}
-              <img
-                src="{{ topic.image.url }}"
-                class="rounded-circle"
-                width="60"
-                height="60"
-                style="object-fit: cover"
-              />
-              {% else %}
-              <div
-                class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold topic-icon"
-              >
-                {{ topic.title|slice:":1" }}
-              </div>
-              {% endif %}
-            </div>
-
-            <div class="flex-grow-1">
-              <div class="d-flex justify-content-between align-items-center">
-                <h5 class="fw-bold text-dark mb-1">{{ topic.title }}</h5>
-                <span class="badge bg-light text-dark border"
-                  >{{ topic.progress|default:0 }}%</span
-                >
-              </div>
-              <small class="text-muted d-block mb-2"
-                >{{ topic.description|truncatewords:10 }}</small
-              >
-
-              <div class="progress" style="height: 6px">
-                <div
-                  class="progress-bar bg-primary"
-                  role="progressbar"
-                  data-progress="{{ topic.progress|default:0 }}"
-                  aria-valuenow="{{ topic.progress|default:0 }}"
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                ></div>
-              </div>
-            </div>
-
-            <div class="ms-3 text-muted">
-              <i class="fas fa-chevron-right"></i>
-            </div>
-          </div>
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1 text-primary"><i class="fas fa-book-open me-2"></i>Chủ đề Từ vựng</h2>
+            <p class="text-muted">Chọn một chủ đề để bắt đầu học Flashcard</p>
         </div>
-      </a>
-      {% empty %}
-      <div class="text-center text-muted py-5">
-        <i class="fas fa-book-open fa-3x mb-3"></i>
-        <p>Chưa có chủ đề nào. Vui lòng liên hệ admin để thêm chủ đề.</p>
-      </div>
-      {% endfor %}
+        <button class="btn btn-outline-primary btn-sm rounded-pill" onclick="loadTopics()">
+            <i class="fas fa-sync-alt me-1"></i> Làm mới
+        </button>
     </div>
-  </div>
+
+    <div id="study-topic-list" class="row">
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Đang tải danh sách chủ đề...</p>
+        </div>
+    </div>
 </div>
 
-<style>
-  .hover-effect {
-    transition: transform 0.2s;
-  }
-  .hover-effect:hover {
-    transform: translateY(-3px);
-    border-color: #0d6efd;
-  }
-  .topic-icon {
-    width: 60px;
-    height: 60px;
-    background-color: #0d6efd;
-    font-size: 24px;
-  }
-</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        loadTopics();
+    });
 
-<script src="{% static 'study/js/topic_list.js' %}"></script>
+    function loadTopics() {
+        const container = document.getElementById('study-topic-list');
+        
+        // GỌI API (Đường dẫn chuẩn: /api/topics/)
+        fetch('/api/topics/')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Lỗi kết nối Server (" + response.status + ")");
+                }
+                return response.json();
+            })
+            .then(data => {
+                container.innerHTML = ''; // Xóa icon loading
+
+                // Trường hợp chưa có dữ liệu
+                if (data.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-12 text-center text-muted py-5">
+                            <i class="fas fa-folder-open fa-3x mb-3"></i>
+                            <p>Chưa có chủ đề nào.</p>
+                        </div>`;
+                    return;
+                }
+
+                // Duyệt qua từng chủ đề và tạo thẻ HTML
+                data.forEach(topic => {
+                    // Xử lý ảnh (Dùng ảnh mặc định nếu không có)
+                    const imageUrl = topic.image ? topic.image : 'https://via.placeholder.com/600x400?text=No+Image';
+                    
+                    // Xử lý mô tả
+                    const description = topic.description ? topic.description : 'Không có mô tả.';
+
+                    // Xử lý tiến độ (Progress)
+                    const progress = topic.progress || 0;
+                    
+                    // Render HTML Card
+                    const html = `
+                    <div class="col-md-4 mb-4 animate__animated animate__fadeIn">
+                        <div class="card h-100 shadow-sm border-0 hover-lift">
+                            <div class="position-relative">
+                                <img src="${imageUrl}" class="card-img-top" alt="${topic.title}" 
+                                     style="height: 200px; object-fit: cover;">
+                                
+                                <div class="position-absolute top-0 end-0 m-2">
+                                    <span class="badge bg-dark bg-opacity-75 rounded-pill">
+                                        ${topic.vocabulary_count || 0} từ
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title fw-bold text-dark">${topic.title}</h5>
+                                <p class="card-text text-muted flex-grow-1 small">
+                                    ${description}
+                                </p>
+                                
+                                <div class="mt-3 mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Tiến độ</span>
+                                        <span>${progress}%</span>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                             style="width: ${progress}%" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <a href="/study/flashcards/${topic.id}/" class="btn btn-primary w-100 rounded-pill fw-bold">
+                                    Học ngay <i class="fas fa-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', html);
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                container.innerHTML = `
+                    <div class="col-12 text-center text-danger py-5">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                        <p>Không thể tải danh sách chủ đề.</p>
+                        <small class="text-muted">${error.message}</small>
+                        <div class="mt-3">
+                            <button class="btn btn-outline-secondary btn-sm" onclick="loadTopics()">Thử lại</button>
+                        </div>
+                    </div>`;
+            });
+    }
+</script>
+
+<style>
+    /* Hiệu ứng nhấc thẻ khi di chuột vào */
+    .hover-lift {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .hover-lift:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    }
+</style>
 {% endblock %}

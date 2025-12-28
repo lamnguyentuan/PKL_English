@@ -1,160 +1,228 @@
-// ==========================================
-// Notebook Review JavaScript
-// ==========================================
+// BIẾN TOÀN CỤC
+let currentQuestion = null; // Lưu dữ liệu câu hỏi hiện tại
+let reviewedIds = [];       // Danh sách ID các từ đã ôn trong phiên
+let selectedOptionId = null; // ID đáp án người dùng chọn (cho bài nghe)
 
-// --- KHAI BÁO BIẾN ---
-const screenQuestion = document.getElementById('screen-question');
-const screenCorrect = document.getElementById('screen-correct');
-const screenWrong = document.getElementById('screen-wrong');
-const btnCheck = document.getElementById('btn-check');
-const btnCheckFill = document.getElementById('btn-check-fill');
-const userInput = document.getElementById('user-input');
-
-// Đọc dữ liệu từ data container
-const questionData = document.getElementById('question-data');
-const questionType = questionData.dataset.type;
-const currentVocabId = questionData.dataset.vocabId;
-const csrfToken = questionData.dataset.csrf;
-const submitUrl = document.getElementById('submit-url').dataset.url;
-
-let selectedVocabId = null;
-let isCorrect = false;
-
-// --- KHỞI TẠO ---
 document.addEventListener('DOMContentLoaded', function() {
-    // Add click handlers to option buttons
-    document.querySelectorAll('.option-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            selectOption(this, parseInt(this.dataset.vocabId), this.dataset.isCorrect === 'true');
+    loadNextQuestion();
+
+    // Sự kiện Enter cho ô input (bài điền từ)
+    const input = document.getElementById("user-input");
+    if (input) {
+        input.addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                submitAnswer();
+            }
         });
-    });
-
-    // Tự động phát audio khi vào trang (chỉ với listening)
-    if (questionType === 'listening') {
-        setTimeout(playAudio, 500);
-    } else if (userInput) {
-        userInput.focus();
-    }
-
-    // Bắt Enter cho fill_blank
-    if (userInput) {
-        userInput.addEventListener("keypress", function(event) {
-            if (event.key === "Enter") submitFillBlankAnswer();
+        
+        // Mở nút kiểm tra khi có nhập liệu
+        input.addEventListener("input", function() {
+            const btn = document.getElementById('btn-check');
+            if (this.value.trim().length > 0) {
+                btn.removeAttribute('disabled');
+            } else {
+                btn.setAttribute('disabled', 'true');
+            }
         });
     }
 });
 
-// --- PHÁT AUDIO ---
-function playAudio() {
-    const audio = document.getElementById('question-audio');
-    if (audio && audio.src) {
-        audio.play();
-        // Animation cho nút
-        const btn = document.getElementById('btn-audio');
-        if (btn) {
-            btn.classList.add('animate__animated', 'animate__pulse');
-            setTimeout(() => {
-                btn.classList.remove('animate__animated', 'animate__pulse');
-            }, 1000);
-        }
-    }
+// --- API FUNCTIONS ---
+
+function loadNextQuestion() {
+    showScreen('screen-loading');
+    
+    // Tạo tham số excluded_ids để API không trả về câu hỏi trùng
+    const excludedParam = reviewedIds.join(',');
+
+    fetch(`/api/notebook-review/question/?excluded_ids=${excludedParam}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.finished) {
+                showScreen('screen-finished');
+                return;
+            }
+            
+            currentQuestion = data;
+            renderQuestion(data);
+        })
+        .catch(err => {
+            console.error("Lỗi tải câu hỏi:", err);
+            // Nếu lỗi (VD: server 500), thử reload lại sau 2s hoặc báo lỗi
+            alert("Có lỗi xảy ra, vui lòng thử lại!");
+        });
 }
 
-// --- CHỌN ĐÁP ÁN ---
-function selectOption(btn, vocabId, correct) {
-    // Bỏ chọn tất cả
+function submitAnswer() {
+    if (!currentQuestion) return;
+
+    let payload = {
+        vocabulary_id: currentQuestion.vocabulary_id,
+        type: currentQuestion.type
+    };
+
+    // Lấy đáp án tùy theo loại câu hỏi
+    if (currentQuestion.type === 'fill_blank') {
+        const val = document.getElementById('user-input').value;
+        if (!val.trim()) return;
+        payload.user_answer = val;
+    } else {
+        // Listening
+        if (!selectedOptionId) return;
+        payload.selected_id = selectedOptionId;
+    }
+
+    // Gọi API chấm điểm
+    fetch('/api/notebook-review/submit/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(result => {
+        // Đánh dấu đã ôn
+        if (!reviewedIds.includes(currentQuestion.vocabulary_id)) {
+            reviewedIds.push(currentQuestion.vocabulary_id);
+        }
+        
+        // Cập nhật progress bar giả lập
+        updateProgressBar();
+
+        // Hiển thị kết quả
+        if (result.is_correct) {
+            showResultScreen('screen-correct');
+        } else {
+            showResultScreen('screen-wrong');
+        }
+    });
+}
+
+// --- UI FUNCTIONS ---
+
+function renderQuestion(data) {
+    // Reset inputs
+    document.getElementById('user-input').value = '';
+    selectedOptionId = null;
+    document.getElementById('btn-check').setAttribute('disabled', 'true');
+
+    // Điền hướng dẫn
+    document.getElementById('q-instruction').innerText = data.instruction;
+
+    // Xử lý Audio
+    const audioDiv = document.getElementById('q-audio-container');
+    const audioSrc = document.getElementById('q-audio-src');
+    
+    // Xử lý Options (Listening) vs Input (Fill Blank)
+    const optionsDiv = document.getElementById('q-options-container');
+    const inputEl = document.getElementById('user-input');
+    const contentEl = document.getElementById('q-content');
+
+    if (data.type === 'listening') {
+        // Hiện Audio
+        audioDiv.classList.remove('d-none');
+        audioSrc.src = data.audio;
+        // Tự động phát nếu muốn: audioSrc.play().catch(()=>{});
+
+        // Ẩn Fill blank
+        inputEl.classList.add('d-none');
+        contentEl.classList.add('d-none');
+        
+        // Hiện Options
+        optionsDiv.classList.remove('d-none');
+        optionsDiv.innerHTML = ''; // Xóa cũ
+        
+        // Tạo các nút đáp án
+        if (data.options) {
+            data.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-outline-secondary py-3 px-4 rounded-pill text-start option-btn';
+                btn.innerHTML = `<span class="badge bg-light text-dark me-2">${index + 1}</span> ${opt.word}`;
+                btn.onclick = () => selectOption(btn, opt.vocabulary_id);
+                optionsDiv.appendChild(btn);
+            });
+        }
+
+    } else {
+        // Fill Blank
+        audioDiv.classList.add('d-none');
+        optionsDiv.classList.add('d-none');
+        
+        // Hiện Input & Nội dung câu
+        inputEl.classList.remove('d-none');
+        contentEl.classList.remove('d-none');
+        contentEl.innerText = data.content;
+        
+        // Focus vào input
+        setTimeout(() => inputEl.focus(), 100);
+    }
+
+    showScreen('screen-question');
+}
+
+function selectOption(btnElement, vocabId) {
+    // Xóa class active ở các nút khác
     document.querySelectorAll('.option-btn').forEach(b => {
-        b.classList.remove('btn-primary', 'text-white');
+        b.classList.remove('active', 'btn-primary');
         b.classList.add('btn-outline-secondary');
     });
-    
-    // Chọn option này
-    btn.classList.remove('btn-outline-secondary');
-    btn.classList.add('btn-primary', 'text-white');
-    
-    selectedVocabId = vocabId;
-    isCorrect = correct;
-    if (btnCheck) btnCheck.disabled = false;
+
+    // Active nút này
+    btnElement.classList.remove('btn-outline-secondary');
+    btnElement.classList.add('active', 'btn-primary'); // CSS bootstrap
+
+    selectedOptionId = vocabId;
+    document.getElementById('btn-check').removeAttribute('disabled');
 }
 
-// --- NỘP BÀI LISTENING ---
-function submitListeningAnswer() {
-    if (!selectedVocabId) return;
+function showResultScreen(screenId) {
+    // Điền thông tin từ vựng vào màn hình kết quả
+    // Lưu ý: API submit trả về is_correct, nhưng ta dùng data từ currentQuestion để hiển thị
+    const prefix = screenId === 'screen-correct' ? 'res-correct' : 'res-wrong';
     
-    btnCheck.disabled = true;
-    
-    fetch(submitUrl, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": csrfToken
-        },
-        body: JSON.stringify({ 
-            vocabulary_id: currentVocabId, 
-            selected_id: selectedVocabId,
-            question_type: 'listening'
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        screenQuestion.classList.add('hidden');
-        if (data.is_correct) {
-            screenCorrect.classList.remove('hidden');
-        } else {
-            screenWrong.classList.remove('hidden');
-        }
-    });
+    document.getElementById(`${prefix}-word`).innerText = currentQuestion.word;
+    document.getElementById(`${prefix}-phonetic`).innerText = `/${currentQuestion.phonetic}/`;
+    document.getElementById(`${prefix}-def`).innerText = currentQuestion.definition || currentQuestion.meaning;
+
+    showScreen(screenId);
 }
 
-// --- NỘP BÀI FILL BLANK ---
-function submitFillBlankAnswer() {
-    const answer = userInput.value.trim();
-    if (!answer) return;
-    
-    btnCheckFill.disabled = true;
-    
-    fetch(submitUrl, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": csrfToken
-        },
-        body: JSON.stringify({ 
-            vocabulary_id: currentVocabId, 
-            user_answer: answer,
-            question_type: 'fill_blank'
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        screenQuestion.classList.add('hidden');
-        if (data.is_correct) {
-            screenCorrect.classList.remove('hidden');
-        } else {
-            screenWrong.classList.remove('hidden');
-        }
-    });
-}
-
-// --- BỎ QUA CÂU HỎI ---
 function skipQuestion() {
-    fetch(submitUrl, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": csrfToken
-        },
-        body: JSON.stringify({ 
-            vocabulary_id: currentVocabId, 
-            selected_id: -1
-        })
-    })
-    .then(() => {
-        location.reload();
-    });
+    // Coi như sai -> Hiện đáp án đúng
+    showResultScreen('screen-wrong');
 }
 
-// --- TIẾP TỤC ---
-function nextQuestion() {
-    location.reload();
+function showScreen(screenId) {
+    ['screen-loading', 'screen-finished', 'screen-question', 'screen-correct', 'screen-wrong'].forEach(id => {
+        document.getElementById(id).classList.add('d-none');
+    });
+    document.getElementById(screenId).classList.remove('d-none');
+}
+
+function playAudio(id) {
+    const el = document.getElementById(id);
+    if(el) el.play();
+}
+
+function updateProgressBar() {
+    const bar = document.getElementById('progress-bar');
+    let w = parseInt(bar.style.width) || 0;
+    if (w < 100) bar.style.width = (w + 10) + '%';
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }

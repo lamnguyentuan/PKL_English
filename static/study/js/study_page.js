@@ -1,121 +1,225 @@
-// ==========================================
-// Study Page JavaScript
-// ==========================================
+// BIẾN TOÀN CỤC
+let currentTopicId = null;
+let currentCardData = null; // Lưu dữ liệu thẻ hiện tại
+let studiedCardIds = [];    // Danh sách các thẻ đã học trong phiên này (để gửi lên API trừ ra)
 
-// --- KHAI BÁO BIẾN ---
-const screenFlashcard = document.getElementById('screen-flashcard');
-const screenQuiz = document.getElementById('screen-quiz');
-const screenCorrect = document.getElementById('screen-correct');
-const screenWrong = document.getElementById('screen-wrong');
-const userInput = document.getElementById('user-input');
-const myCard = document.getElementById('my-card');
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Lấy Topic ID từ HTML
+    currentTopicId = document.getElementById('topic-id').value;
+    
+    // 2. Tải thẻ đầu tiên
+    loadNextCard();
 
-// Đọc dữ liệu từ data container
-const pageData = document.getElementById('page-data');
-const submitUrl = pageData.dataset.submitUrl;
-const notebookUrl = pageData.dataset.notebookUrl;
-const csrfToken = pageData.dataset.csrf;
-const cardId = pageData.dataset.cardId;
-const topicId = pageData.dataset.topicId;
-const vocabId = pageData.dataset.vocabId;
-
-let isFlipped = false;
-
-// --- 1. HÀM LẬT THẺ (Toggle Class) ---
-function toggleCard() {
-    if (!isFlipped) {
-        myCard.classList.add('is-flipped');
-        setTimeout(() => { playAudio('fc-audio'); }, 300);
-        isFlipped = true;
-    } else {
-        myCard.classList.remove('is-flipped');
-        isFlipped = false;
-    }
-}
-
-// --- 2. CHUYỂN SANG QUIZ ---
-function startQuiz() {
-    screenFlashcard.classList.add('hidden'); 
-    screenQuiz.classList.remove('hidden');   
-    userInput.focus();                       
-}
-
-// --- 3. NỘP BÀI (GỌI API) ---
-function submitAnswer() {
-    const answer = userInput.value.trim();
-
-    if (!answer) return; 
-
-    // Khóa nút để tránh spam click
-    document.getElementById('btn-check').disabled = true;
-
-    fetch(submitUrl, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": csrfToken
-        },
-        body: JSON.stringify({ card_id: cardId, user_answer: answer, topic_id: topicId })
-    })
-    .then(res => res.json())
-    .then(data => {
-        handleResult(data);
-    })
-    .catch(err => {
-        console.error(err);
-        alert("Lỗi kết nối server!");
-        document.getElementById('btn-check').disabled = false;
+    // 3. Sự kiện nhấn Enter để nộp bài
+    document.getElementById("user-input").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            submitAnswer();
+        }
     });
+});
+
+// --- API FUNCTIONS ---
+
+function loadNextCard() {
+    // Reset giao diện về mặc định
+    resetUI();
+
+    // Tạo chuỗi ID đã học để API loại trừ: ?excluded_ids=1,2,3
+    const excludedParam = studiedCardIds.join(',');
+
+    fetch(`/api/study/card/${currentTopicId}/?excluded_ids=${excludedParam}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.finished) {
+                // Nếu API báo hết bài -> Chuyển về Dashboard hoặc hiện thông báo
+                alert("Chúc mừng! Bạn đã hoàn thành tất cả từ vựng trong chủ đề này.");
+                window.location.href = "/"; // Hoặc trang dashboard
+                return;
+            }
+            
+            // Lưu dữ liệu thẻ hiện tại
+            currentCardData = data;
+            
+            // Render dữ liệu lên màn hình
+            renderFlashcard(data);
+        })
+        .catch(err => console.error("Lỗi tải thẻ:", err));
 }
 
-function handleResult(data) {
-    screenQuiz.classList.add('hidden'); 
+function submitAnswer() {
+    const userAnswer = document.getElementById('user-input').value;
+    const cardId = currentCardData.card_id;
 
-    if (data.is_correct) {
-        screenCorrect.classList.remove('hidden');
-    } else {
-        screenWrong.classList.remove('hidden');
-    }
-}
+    fetch('/api/study/submit/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken') // Hàm lấy token Django
+        },
+        body: JSON.stringify({
+            card_id: cardId,
+            user_answer: userAnswer
+        })
+    })
+    .then(response => response.json())
+    .then(result => {
+        // Đánh dấu thẻ này đã học xong trong phiên
+        if (!studiedCardIds.includes(cardId)) {
+            studiedCardIds.push(cardId);
+        }
 
-// --- CÁC HÀM TIỆN ÍCH ---
-function playAudio(id) {
-    const audio = document.getElementById(id);
-    if(audio && audio.src) audio.play();
-}
+        // Cập nhật Progress bar (Logic đơn giản: đếm số thẻ đã qua)
+        updateProgressBar();
 
-function nextQuestion() {
-    location.reload();
+        if (result.is_correct) {
+            showCorrectScreen();
+        } else {
+            showWrongScreen(result);
+        }
+    })
+    .catch(err => console.error("Lỗi nộp bài:", err));
 }
 
 function saveToNotebook() {
-    fetch(notebookUrl, {
-        method: "POST",
+    if (!currentCardData) return;
+
+    fetch('/api/notebook/', {
+        method: 'POST',
         headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": csrfToken
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
         },
-        body: JSON.stringify({ vocabulary_id: vocabId })
+        body: JSON.stringify({
+            vocabulary_id: currentCardData.vocabulary_id,
+            note: "Lưu từ màn hình học"
+        })
     })
-    .then(res => res.json())
-    .then(data => {
-        // Cập nhật cả 2 nút (correct và wrong)
-        const btns = document.querySelectorAll('#btn-save-correct, #btn-save-wrong');
-        btns.forEach(btn => {
-            btn.innerHTML = '<i class="fas fa-check me-1"></i> Đã lưu';
-            btn.classList.remove('btn-outline-primary');
-            btn.classList.add('btn-success');
-            btn.disabled = true;
-        });
+    .then(res => {
+        if (res.ok) alert("Đã lưu vào sổ tay!");
+        else alert("Lỗi khi lưu sổ tay");
     });
 }
 
-// --- KHỞI TẠO ---
-document.addEventListener('DOMContentLoaded', function() {
-    // Bắt sự kiện phím Enter ở ô input
-    if (userInput) {
-        userInput.addEventListener("keypress", function(event) {
-            if (event.key === "Enter") submitAnswer();
-        });
+// --- UI FUNCTIONS ---
+
+function renderFlashcard(data) {
+    // Điền thông tin Flashcard
+    document.getElementById('fc-front-word').innerText = data.word;
+    document.getElementById('fc-back-word').innerText = data.word;
+    document.getElementById('fc-phonetic').innerText = `/${data.phonetic}/`;
+    document.getElementById('fc-definition').innerText = data.definition;
+
+    // Xử lý Audio Flashcard
+    const fcAudioDiv = document.getElementById('fc-audio-container');
+    const fcAudioSrc = document.getElementById('fc-audio-src');
+    if (data.audio) {
+        fcAudioDiv.style.display = 'block';
+        fcAudioSrc.src = data.audio;
+    } else {
+        fcAudioDiv.style.display = 'none';
     }
-});
+
+    // Điền thông tin Quiz (ẩn sẵn để dùng sau)
+    document.getElementById('quiz-instruction').innerText = data.instruction;
+    
+    // Ảnh
+    const quizImg = document.getElementById('quiz-image');
+    if (data.image) {
+        quizImg.src = data.image;
+        quizImg.classList.remove('d-none');
+    } else {
+        quizImg.classList.add('d-none');
+    }
+
+    // Audio Quiz
+    const quizAudioDiv = document.getElementById('quiz-audio-container');
+    const quizAudioSrc = document.getElementById('quiz-audio-src');
+    if (data.type === 'listening' && data.audio) {
+        quizAudioDiv.classList.remove('d-none');
+        quizAudioSrc.src = data.audio;
+    } else {
+        quizAudioDiv.classList.add('d-none');
+    }
+
+    // Text Quiz (Điền từ)
+    const quizContent = document.getElementById('quiz-content');
+    if (data.content) {
+        quizContent.innerText = data.content;
+        quizContent.classList.remove('d-none');
+    } else {
+        quizContent.classList.add('d-none');
+    }
+
+    // Hiện màn hình Flashcard
+    showScreen('screen-flashcard');
+}
+
+function startQuiz() {
+    showScreen('screen-quiz');
+    // Focus vào ô input và xóa nội dung cũ
+    const input = document.getElementById('user-input');
+    input.value = '';
+    input.focus();
+}
+
+function showCorrectScreen() {
+    showScreen('screen-correct');
+    playSuccessSound(); // Tùy chọn nếu bạn có âm thanh
+}
+
+function showWrongScreen(result) {
+    // Điền thông tin đáp án đúng
+    document.getElementById('wrong-correct-word').innerText = result.word;
+    document.getElementById('wrong-meaning').innerText = result.meaning;
+    showScreen('screen-wrong');
+}
+
+// --- HELPER FUNCTIONS ---
+
+function toggleCard() {
+    document.getElementById('my-card').classList.toggle('flipped');
+}
+
+function showScreen(screenId) {
+    // Ẩn tất cả các màn hình
+    ['screen-flashcard', 'screen-quiz', 'screen-correct', 'screen-wrong'].forEach(id => {
+        document.getElementById(id).classList.add('d-none');
+    });
+    // Hiện màn hình cần thiết
+    document.getElementById(screenId).classList.remove('d-none');
+}
+
+function resetUI() {
+    // Lật thẻ về mặt trước
+    document.getElementById('my-card').classList.remove('flipped');
+}
+
+function playAudio(elementId) {
+    const audio = document.getElementById(elementId);
+    if (audio) audio.play();
+}
+
+function updateProgressBar() {
+    // Giả lập progress bar (bạn có thể cải tiến logic này bằng cách lấy total từ API)
+    const progressBar = document.getElementById('progress-bar');
+    let currentWidth = parseInt(progressBar.style.width) || 0;
+    if (currentWidth < 100) {
+        progressBar.style.width = (currentWidth + 10) + '%';
+    }
+}
+
+// Hàm lấy CSRF Token mặc định của Django
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}

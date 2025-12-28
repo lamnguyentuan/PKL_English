@@ -8,40 +8,36 @@
 <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 85vh;">
 
     <div class="w-100 fixed-top bg-white px-3 py-2 d-flex align-items-center shadow-sm" style="height: 60px; z-index: 100;">
-        <a href="{% url 'topic_list' %}" class="text-muted me-3"><i class="fas fa-times fa-lg"></i></a>
+        <a href="/" class="text-muted me-3"><i class="fas fa-times fa-lg"></i></a>
         <div class="progress flex-grow-1 rounded-pill" style="height: 8px; background-color: #eee;">
-            <div class="progress-bar bg-warning rounded-pill" id="progress-bar"></div>
+            <div class="progress-bar bg-warning rounded-pill" id="progress-bar" style="width: 0%"></div>
         </div>
-        <script>document.getElementById('progress-bar').style.width = '{{ progress|default:0 }}%';</script>
         <div class="ms-3 text-warning"><i class="fas fa-lemon fa-lg"></i></div>
     </div>
 
     <div class="study-container w-100 px-3" style="max-width: 500px; margin-top: 50px;">
 
         <div id="screen-flashcard" class="animate__animated animate__fadeIn">
-            
             <div class="flip-container" onclick="toggleCard()">
                 <div id="my-card" class="card-container">
                     
                     <div class="card-face-front">
-                        <h2 class="fw-bold text-primary mb-1 display-5">{{ question.word }}</h2>
-                        
-                    
+                        <h2 id="fc-front-word" class="fw-bold text-primary mb-1 display-5">Loading...</h2>
                         <i class="fas fa-hand-pointer text-warning mt-2 fa-2x animate__animated animate__pulse animate__infinite"></i>
                     </div>
                     
                     <div class="card-face-back">
-                        <h2 class="fw-bold text-primary mb-1 display-5">{{ question.word }}</h2>
-                        <p class="text-muted fst-italic mb-3">/{{ question.phonetic }}/</p>
+                        <h2 id="fc-back-word" class="fw-bold text-primary mb-1 display-5"></h2>
+                        <p id="fc-phonetic" class="text-muted fst-italic mb-3"></p>
                         
-                        <h4 class="text-dark mb-4 text-center">{{ question.definition }}</h4>
+                        <h4 id="fc-definition" class="text-dark mb-4 text-center"></h4>
 
-                        {% if question.audio %}
-                            <button onclick="event.stopPropagation(); playAudio('fc-audio')" class="btn btn-warning text-white rounded-circle p-3 mb-4 shadow-sm">
+                        <div id="fc-audio-container" style="display: none;">
+                            <button onclick="event.stopPropagation(); playAudio('fc-audio-src')" class="btn btn-warning text-white rounded-circle p-3 mb-4 shadow-sm">
                                 <i class="fas fa-volume-up fa-lg"></i>
                             </button>
-                            <audio id="fc-audio" src="{{ question.audio }}"></audio>
-                        {% endif %}
+                            <audio id="fc-audio-src"></audio>
+                        </div>
 
                         <button onclick="event.stopPropagation(); startQuiz()" class="btn btn-mochi w-75 rounded-pill py-3 text-uppercase mt-auto shadow-sm">
                             Đã nhớ! Kiểm tra
@@ -52,18 +48,21 @@
             </div>
         </div>
 
-        <div id="screen-quiz" class="hidden animate__animated animate__fadeInRight">
+        <div id="screen-quiz" class="d-none animate__animated animate__fadeInRight">
             <div class="text-center card shadow-sm p-4 border-0">
                 
-                {% if question.image %}
-                    <img src="{{ question.image }}" class="img-fluid rounded mb-4" style="max-height: 150px;">
-                {% endif %}
+                <img id="quiz-image" src="" class="img-fluid rounded mb-4 d-none" style="max-height: 150px;">
 
-                <h5 class="text-secondary mb-3 small text-uppercase fw-bold">{{ question.instruction }}</h5>
+                <h5 id="quiz-instruction" class="text-secondary mb-3 small text-uppercase fw-bold"></h5>
 
-                {% if question.content %}
-                    <h4 class="fw-bold text-dark mb-4" style="letter-spacing: 2px;">{{ question.content }}</h4>
-                {% endif %}
+                <div id="quiz-audio-container" class="mb-4 d-none">
+                    <button onclick="playAudio('quiz-audio-src')" class="btn btn-light rounded-circle p-4 shadow-sm">
+                        <i class="fas fa-volume-up fa-2x text-warning"></i>
+                    </button>
+                    <audio id="quiz-audio-src"></audio>
+                </div>
+
+                <h4 id="quiz-content" class="fw-bold text-dark mb-4 d-none" style="letter-spacing: 2px;"></h4>
 
                 <input type="text" id="user-input" 
                        class="form-control form-control-lg text-center fw-bold border-2 rounded-pill py-3 mb-4" 
@@ -75,47 +74,37 @@
             </div>
         </div>
 
-        <div id="screen-correct" class="hidden text-center p-5 animate__animated animate__bounceIn">
+        <div id="screen-correct" class="d-none text-center p-5 animate__animated animate__bounceIn">
             <i class="fas fa-check-circle text-success" style="font-size: 80px;"></i>
             <h2 class="fw-bold text-success mt-4">CHÍNH XÁC!</h2>
             <p class="text-muted mb-3">Giỏi lắm!</p>
             
-            <!-- Nút lưu sổ tay -->
-            <button onclick="saveToNotebook()" class="btn btn-outline-primary rounded-pill mb-3" id="btn-save-correct">
+            <button onclick="saveToNotebook()" class="btn btn-outline-primary rounded-pill mb-3">
                 <i class="fas fa-bookmark me-1"></i> Lưu vào sổ tay
             </button>
             
-            <button onclick="nextQuestion()" class="btn btn-success w-100 rounded-pill py-3 fw-bold mt-2">TIẾP TỤC</button>
+            <button onclick="loadNextCard()" class="btn btn-success w-100 rounded-pill py-3 fw-bold mt-2">TIẾP TỤC</button>
         </div>
 
-        <div id="screen-wrong" class="hidden p-4 text-center animate__animated animate__shakeX card shadow-sm border-danger">
+        <div id="screen-wrong" class="d-none p-4 text-center animate__animated animate__shakeX card shadow-sm border-danger">
             <div class="alert alert-danger rounded-pill fw-bold mb-4">CHƯA CHÍNH XÁC</div>
             
             <h6 class="text-muted small text-uppercase">Đáp án đúng là:</h6>
-            <h2 class="fw-bold text-primary">{{ question.word }}</h2>
-            <p class="text-dark">{{ question.meaning }}</p>
+            <h2 id="wrong-correct-word" class="fw-bold text-primary"></h2>
+            <p id="wrong-meaning" class="text-dark"></p>
             
-            <!-- Nút lưu sổ tay -->
-            <button onclick="saveToNotebook()" class="btn btn-outline-primary rounded-pill mb-3" id="btn-save-wrong">
+            <button onclick="saveToNotebook()" class="btn btn-outline-primary rounded-pill mb-3">
                 <i class="fas fa-bookmark me-1"></i> Lưu vào sổ tay
             </button>
             
-            <button onclick="nextQuestion()" class="btn btn-secondary w-100 rounded-pill py-3 fw-bold mt-3">TIẾP TỤC</button>
+            <button onclick="loadNextCard()" class="btn btn-secondary w-100 rounded-pill py-3 fw-bold mt-3">TIẾP TỤC</button>
         </div>
 
     </div>
-  </div>
 </div>
 
-<!-- Data container for JavaScript -->
-<div id="page-data" 
-     data-submit-url="{% url 'submit_answer' %}"
-     data-notebook-url="{% url 'add_to_notebook' %}"
-     data-csrf="{{ csrf_token }}"
-     data-card-id="{{ question.card_id }}"
-     data-topic-id="{{ topic_id }}"
-     data-vocab-id="{{ question.vocabulary_id }}"
-     style="display:none;"></div>
+<input type="hidden" id="topic-id" value="{{ topic_id }}">
+<input type="hidden" id="api-base-url" value="/api"> 
 
 <script src="{% static 'study/js/study_page.js' %}"></script>
 {% endblock %}
