@@ -47,19 +47,19 @@ def topic_list(request):
     return render(request, 'study/topic_list.html', {'topics': topics_with_progress})
 
 
+
 @login_required
 def study_session(request, topic_id):
-    """
-    Chỉ cho phép học topic PUBLIC (hệ thống) ở luồng học hiện tại.
-    Topic riêng sẽ demo ở UI khác (my-topics) để không ảnh hưởng logic học.
-    """
-    # ✅ Bảo vệ: topic_id phải thuộc public topics
-    # Nếu không muốn chặn, bạn có thể bỏ đoạn này.
-    if not public_topics_qs().filter(id=topic_id).exists():
-        return render(request, "study/finished.html", {
-            "message": "Topic không tồn tại hoặc bạn không có quyền truy cập.",
-            "stats": StudyService.get_stats(request.user),
-            "topic_id": topic_id
+    topic = get_object_or_404(Topic, id=topic_id)
+
+    is_public = (topic.owner is None and topic.is_public)
+    is_owner = (topic.owner_id == request.user.id)
+
+    if not (is_public or is_owner):
+        return render(request, 'study/finished.html', {
+            'message': 'Topic không tồn tại hoặc bạn không có quyền truy cập.',
+            'stats': StudyService.get_stats(request.user),
+            'topic_id': topic_id
         })
 
     session_key = f'studied_cards_{topic_id}'
@@ -228,3 +228,100 @@ def notebook_review_reset(request):
     if session_key in request.session:
         del request.session[session_key]
     return redirect('notebook_review')
+
+from django.contrib import messages
+from django.shortcuts import get_object_or_404
+from .forms import MyTopicForm, MyVocabularyForm
+from .models import Vocabulary
+
+@login_required
+def my_topic_list(request):
+    topics = Topic.objects.filter(owner=request.user).order_by("-id")
+    return render(request, "study/my_topic_list.html", {"topics": topics})
+
+@login_required
+def my_topic_create(request):
+    if request.method == "POST":
+        form = MyTopicForm(request.POST, request.FILES)
+        if form.is_valid():
+            topic = form.save(commit=False)
+            topic.owner = request.user
+            topic.is_public = False
+            topic.save()
+            messages.success(request, "Đã tạo Topic riêng.")
+            return redirect("my_topic_detail", topic_id=topic.id)
+        messages.error(request, "Tạo Topic thất bại.")
+    else:
+        form = MyTopicForm()
+    return render(request, "study/my_topic_form.html", {"form": form, "mode": "create"})
+
+@login_required
+def my_topic_detail(request, topic_id):
+    topic = get_object_or_404(Topic, id=topic_id, owner=request.user)
+    vocabs = Vocabulary.objects.filter(topic=topic).order_by("id")
+    return render(request, "study/my_topic_detail.html", {"topic": topic, "vocabs": vocabs})
+
+@login_required
+def my_topic_edit(request, topic_id):
+    topic = get_object_or_404(Topic, id=topic_id, owner=request.user)
+    if request.method == "POST":
+        form = MyTopicForm(request.POST, request.FILES, instance=topic)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Đã cập nhật Topic.")
+            return redirect("my_topic_detail", topic_id=topic.id)
+        messages.error(request, "Cập nhật thất bại.")
+    else:
+        form = MyTopicForm(instance=topic)
+    return render(request, "study/my_topic_form.html", {"form": form, "mode": "edit"})
+
+@login_required
+def my_topic_delete(request, topic_id):
+    topic = get_object_or_404(Topic, id=topic_id, owner=request.user)
+    if request.method == "POST":
+        topic.delete()
+        messages.success(request, "Đã xóa Topic.")
+        return redirect("my_topic_list")
+    return render(request, "study/my_topic_delete.html", {"topic": topic})
+
+@login_required
+def my_vocab_create(request, topic_id):
+    topic = get_object_or_404(Topic, id=topic_id, owner=request.user)
+    if request.method == "POST":
+        form = MyVocabularyForm(request.POST, request.FILES)
+        if form.is_valid():
+            vocab = form.save(commit=False)
+            vocab.topic = topic
+            vocab.save()
+            messages.success(request, "Đã thêm từ vựng.")
+            return redirect("my_topic_detail", topic_id=topic.id)
+        messages.error(request, "Thêm từ thất bại.")
+    else:
+        form = MyVocabularyForm()
+    return render(request, "study/my_vocab_form.html", {"form": form, "topic": topic, "mode": "create"})
+
+@login_required
+def my_vocab_edit(request, topic_id, vocab_id):
+    topic = get_object_or_404(Topic, id=topic_id, owner=request.user)
+    vocab = get_object_or_404(Vocabulary, id=vocab_id, topic=topic)
+    if request.method == "POST":
+        form = MyVocabularyForm(request.POST, request.FILES, instance=vocab)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Đã cập nhật từ vựng.")
+            return redirect("my_topic_detail", topic_id=topic.id)
+        messages.error(request, "Cập nhật thất bại.")
+    else:
+        form = MyVocabularyForm(instance=vocab)
+    return render(request, "study/my_vocab_form.html", {"form": form, "topic": topic, "mode": "edit"})
+
+@login_required
+def my_vocab_delete(request, topic_id, vocab_id):
+    topic = get_object_or_404(Topic, id=topic_id, owner=request.user)
+    vocab = get_object_or_404(Vocabulary, id=vocab_id, topic=topic)
+    if request.method == "POST":
+        vocab.delete()
+        messages.success(request, "Đã xóa từ vựng.")
+        return redirect("my_topic_detail", topic_id=topic.id)
+    return render(request, "study/my_vocab_delete.html", {"topic": topic, "vocab": vocab})
+

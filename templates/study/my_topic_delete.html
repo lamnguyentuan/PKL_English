@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Xóa Topic{% endblock %}
+
+{% block content %}
+<div class="card p-4 shadow-sm">
+  <h4 class="mb-3 text-danger">Xóa Topic</h4>
+  <p>Bạn chắc chắn muốn xóa topic: <b>{{ topic.title }}</b>?</p>
+  <p class="text-muted mb-3">Lưu ý: Xóa topic sẽ xóa luôn các từ vựng thuộc topic này.</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="d-flex gap-2">
+      <button class="btn btn-danger" type="submit">Xóa</button>
+      <a class="btn btn-secondary" href="{% url 'my_topic_detail' topic.id %}">Hủy</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

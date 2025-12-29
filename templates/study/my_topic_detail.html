@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Quản lý Topic{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="mb-0">{{ topic.title }}</h4>
+    <div class="text-muted">{{ topic.description }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'my_topic_edit' topic.id %}">
+      <i class="fas fa-pen me-1"></i>Sửa topic
+    </a>
+    <a class="btn btn-primary" href="{% url 'my_vocab_create' topic.id %}">
+      <i class="fas fa-plus me-1"></i>Thêm từ
+    </a>
+    <a class="btn btn-success" href="{% url 'study_session' topic.id %}">
+  <i class="fas fa-play me-1"></i>Vào học ngay
+</a>
+  </div>
+</div>
+
+<div class="card p-3 shadow-sm">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h5 class="mb-0">Danh sách từ vựng</h5>
+    <span class="badge bg-info">Total: {{ vocabs|length }}</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th>Word</th>
+          <th>Phonetic</th>
+          <th>Definition</th>
+          <th style="width: 180px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in vocabs %}
+          <tr>
+            <td class="fw-bold">{{ v.word }}</td>
+            <td class="text-muted">{{ v.phonetic }}</td>
+            <td>{{ v.definition }}</td>
+            <td class="text-end">
+              <a class="btn btn-outline-secondary btn-sm" href="{% url 'my_vocab_edit' topic.id v.id %}">Sửa</a>
+              <a class="btn btn-outline-danger btn-sm" href="{% url 'my_vocab_delete' topic.id v.id %}">Xóa</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="4" class="text-muted">Chưa có từ vựng nào. Bấm “Thêm từ” để tạo.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="mt-3">
+  <a class="btn btn-link px-0" href="{% url 'my_topic_list' %}">← Quay lại danh sách topic</a>
+</div>
+{% endblock %}
