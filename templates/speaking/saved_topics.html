@@ -1,0 +1,97 @@
+{% extends "base.html" %} {% block content %}
+<div class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-5">
+    <h2 class="fw-bold m-0">
+      <i class="fas fa-star text-warning me-2"></i>Chủ đề đã lưu
+    </h2>
+    <a
+      href="{% url 'speaking_topics' %}"
+      class="btn btn-secondary rounded-pill px-4"
+    >
+      <i class="fas fa-arrow-left me-2"></i>Tất cả chủ đề
+    </a>
+  </div>
+
+  <div class="mb-5">
+    <div
+      class="input-group shadow-sm rounded-pill overflow-hidden"
+      style="max-width: 600px; margin: 0 auto"
+    >
+      <span class="input-group-text bg-white border-end-0 ps-4"
+        ><i class="fas fa-search text-muted"></i
+      ></span>
+      <input
+        type="text"
+        id="searchInput"
+        class="form-control border-start-0 py-2 shadow-none"
+        placeholder="Tìm trong danh sách đã lưu..."
+      />
+    </div>
+  </div>
+
+  <div class="row" id="topicContainer">
+    {% for topic in topics %}
+    <div class="col-md-4 mb-4 topic-card">
+      <div
+        class="card h-100 shadow-sm border-0 rounded-4 overflow-hidden position-relative"
+      >
+        <div class="position-absolute top-0 end-0 p-3" style="z-index: 10">
+          <button
+            class="btn btn-light rounded-circle shadow-sm save-topic-btn"
+            data-id="{{ topic.id }}"
+          >
+            <i class="fas fa-star text-warning fs-5"></i>
+          </button>
+        </div>
+        <div class="card-body">
+          <h5 class="card-title fw-bold topic-title">{{ topic.title }}</h5>
+          <p class="card-text text-muted topic-desc">
+            {{ topic.description|truncatewords:15 }}
+          </p>
+          <a
+            href="{% url 'sentence_list' topic.id %}"
+            class="btn btn-primary w-100 rounded-pill"
+            >Học ngay</a
+          >
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center py-5">
+      <h4 class="text-muted">Bạn chưa lưu chủ đề nào.</h4>
+    </div>
+    {% endfor %}
+  </div>
+  <div id="noResults" class="text-center py-5" style="display: none">
+    <p class="text-muted">Không tìm thấy.</p>
+  </div>
+</div>
+
+<script>
+  // Copy lại đoạn script xử lý bấm sao để người dùng có thể "Bỏ lưu" trực tiếp tại trang này
+  document.querySelectorAll(".save-topic-btn").forEach((btn) => {
+    btn.onclick = async function (e) {
+      e.preventDefault();
+      const topicId = this.getAttribute("data-id");
+      const card = this.closest(".col-md-4"); // Lấy cái card chứa nút này
+
+      try {
+        const response = await fetch(`/speaking/toggle-save/${topicId}/`, {
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+        });
+        const data = await response.json();
+
+        if (data.status === "success" && !data.saved) {
+          // Nếu bấm bỏ lưu, làm mờ rồi xóa card đó khỏi trang này luôn cho chuyên nghiệp
+          card.style.transition = "all 0.4s ease";
+          card.style.opacity = "0";
+          card.style.transform = "scale(0.9)";
+          setTimeout(() => card.remove(), 400);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+  });
+</script>
+{% endblock %}

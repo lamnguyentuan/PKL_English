@@ -14,6 +14,14 @@ class SpeakingTopic(models.Model):
     description = models.TextField(blank=True, verbose_name="Mô tả")
     image = models.ImageField(upload_to='speaking_topics/', null=True, blank=True, verbose_name="Hình ảnh minh họa")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Ngày tạo")
+    
+    users_who_saved = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name="saved_speaking_topics",
+        verbose_name="Người dùng đã lưu"
+    )
+
 
     def __str__(self):
         return self.title

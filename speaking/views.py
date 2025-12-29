@@ -2,10 +2,10 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from .models import SpeakingTopic, SpeakingSentence, PronunciationLog
 from .services.services import AzureSpeechService
-
+from django.contrib.auth.decorators import login_required
 # Trang 1: Danh sách Topic
 def topic_list(request):
-    topics = SpeakingTopic.objects.all()
+    topics = SpeakingTopic.objects.all().order_by('-created_at')
     return render(request, 'speaking/topic_list.html', {'topics': topics})
 
 # Trang 2: Danh sách Câu trong Topic
@@ -51,3 +51,24 @@ def submit_pronunciation(request):
             return JsonResponse({"status": "success", "data": result})
         
         return JsonResponse({"status": "error", "message": "API Error"}, status=500)
+    
+@login_required
+def toggle_save_topic(request, topic_id):
+    topic = get_object_or_404(SpeakingTopic, id=topic_id)
+    user = request.user
+    
+    if user in topic.users_who_saved.all():
+        topic.users_who_saved.remove(user)
+        saved = False
+    else:
+        topic.users_who_saved.add(user)
+        saved = True
+        
+    return JsonResponse({
+        'status': 'success',
+        'saved': saved
+    })
+@login_required
+def saved_topics(request):
+    topics = request.user.saved_speaking_topics.all().order_by('-created_at')
+    return render(request, 'speaking/saved_topics.html', {'topics': topics})

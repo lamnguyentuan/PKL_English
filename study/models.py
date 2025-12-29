@@ -11,7 +11,15 @@ class Topic(models.Model):
     title = models.CharField(max_length=200, verbose_name="Tên chủ đề")
     description = models.TextField(blank=True, verbose_name="Mô tả")
     image = models.ImageField(upload_to='topic_images/', null=True, blank=True)
-    
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="study_topics"
+    )
+    is_public = models.BooleanField(default=True)
+
     def __str__(self):
         return self.title
 

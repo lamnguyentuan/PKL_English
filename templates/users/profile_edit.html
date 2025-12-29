@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Hồ sơ cá nhân{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card shadow-sm p-4">
+      <h4 class="mb-3">Cập nhật hồ sơ</h4>
+
+      {% if user.avatar %}
+        <div class="mb-3 text-center">
+          <img src="{{ user.avatar.url }}" class="rounded-circle border" width="100" height="100" style="object-fit:cover;" alt="avatar">
+        </div>
+      {% endif %}
+
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label class="form-label">Họ</label>
+          {{ form.last_name }}
+          <div class="text-danger small">{{ form.last_name.errors }}</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Tên</label>
+          {{ form.first_name }}
+          <div class="text-danger small">{{ form.first_name.errors }}</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          {{ form.email }}
+          <div class="text-danger small">{{ form.email.errors }}</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Avatar</label>
+          {{ form.avatar }}
+          <div class="text-danger small">{{ form.avatar.errors }}</div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Lưu</button>
+          <a href="{% url 'password_change' %}" class="btn btn-outline-secondary">Đổi mật khẩu</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
