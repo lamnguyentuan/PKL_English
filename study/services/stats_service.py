@@ -89,13 +89,13 @@ class StatsService:
             cursor.execute("""
                 SELECT 
                     v.word,
-                    v.meaning_sentence,
+                    v.definition,
                     COUNT(*) as total_attempts,
                     SUM(CASE WHEN sl.is_correct = 0 THEN 1 ELSE 0 END) as wrong_count
                 FROM study_studylog sl
                 JOIN study_vocabulary v ON sl.vocabulary_id = v.id
                 WHERE sl.user_id = %s
-                GROUP BY sl.vocabulary_id, v.word, v.meaning_sentence
+                GROUP BY sl.vocabulary_id, v.word, v.definition
                 HAVING wrong_count > 0
                 ORDER BY wrong_count DESC
                 LIMIT 5

@@ -68,7 +68,6 @@
 </div>
 
 <script>
-  // Copy lại đoạn script xử lý bấm sao để người dùng có thể "Bỏ lưu" trực tiếp tại trang này
   document.querySelectorAll(".save-topic-btn").forEach((btn) => {
     btn.onclick = async function (e) {
       e.preventDefault();
@@ -76,13 +75,12 @@
       const card = this.closest(".col-md-4"); // Lấy cái card chứa nút này
 
       try {
-        const response = await fetch(`/speaking/toggle-save/${topicId}/`, {
+        const response = await fetch(`/speaking/api/toggle-save/${topicId}/`, {
           headers: { "X-Requested-With": "XMLHttpRequest" },
         });
         const data = await response.json();
 
         if (data.status === "success" && !data.saved) {
-          // Nếu bấm bỏ lưu, làm mờ rồi xóa card đó khỏi trang này luôn cho chuyên nghiệp
           card.style.transition = "all 0.4s ease";
           card.style.opacity = "0";
           card.style.transform = "scale(0.9)";

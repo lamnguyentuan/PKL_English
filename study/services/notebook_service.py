@@ -24,7 +24,7 @@ class NotebookService:
             existing = cursor.fetchone()
             
             if existing:
-                return {'status': 'exists', 'message': 'Từ đã có trong sổ tay'}
+                return {'status': 'exi sts', 'message': 'Từ đã có trong sổ tay'}
             
             # Thêm mới
             cursor.execute("""

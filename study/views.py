@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.core.serializers.json import DjangoJSONEncoder
+
 import json
 
 from .models import Topic, Flashcard
@@ -116,6 +118,8 @@ def study_stats(request):
 @login_required
 def detailed_stats(request):
     stats = StudyService.get_detailed_stats(request.user)
+    stats['daily_stats_json'] = json.dumps(stats['daily_stats'], cls=DjangoJSONEncoder)
+
     return render(request, 'study/detailed_stats.html', {'stats': stats})
 
 

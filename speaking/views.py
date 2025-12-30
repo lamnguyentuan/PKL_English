@@ -24,32 +24,7 @@ def practice_sentence(request, sentence_id):
     })
 
 # API xử lý ghi âm (Gọi từ AJAX)
-def submit_pronunciation(request):
-    if request.method == 'POST':
-        sentence_id = request.POST.get('sentence_id')
-        audio_data = request.FILES.get('audio_data')
-        sentence = get_object_or_404(SpeakingSentence, id=sentence_id)
 
-        # Tạo log tạm để lấy file vật lý
-        log = PronunciationLog.objects.create(
-            user=request.user,
-            sentence=sentence,
-            audio_file=audio_data
-        )
-
-        # Gọi Azure
-        result = AzureSpeechService.assess_pronunciation(log.audio_file.path, sentence.text)
-
-        if result['success']:
-            log.overall_score = result['overall_score']
-            log.accuracy_score = result['accuracy_score']
-            log.fluency_score = result['fluency_score']
-            log.completeness_score = result['completeness_score']
-            log.api_response = result['full_response']
-            log.save()
-            return JsonResponse({"status": "success", "data": result})
-        
-        return JsonResponse({"status": "error", "message": "API Error"}, status=500)
     
 @login_required
 def toggle_save_topic(request, topic_id):

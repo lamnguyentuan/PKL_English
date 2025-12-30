@@ -89,7 +89,7 @@
                         <tr>
                             <td>{{ forloop.counter }}</td>
                             <td class="fw-bold text-primary">{{ word.word }}</td>
-                            <td>{{ word.meaning_sentence }}</td>
+                            <td>{{ word.definition }}</td>
                             <td><span class="badge bg-danger">{{ word.wrong_count }}</span></td>
                             <td>{{ word.total_attempts }}</td>
                         </tr>
@@ -139,7 +139,7 @@
 <!-- Data container for JavaScript -->
 <script id="stats-data" type="application/json">
 {
-    "dailyStats": {{ stats.daily_stats|safe }},
+    "dailyStats": {{ stats.daily_stats_json|safe }},
     "masteredCount": {{ stats.mastered_count }},
     "totalWords": {{ stats.total_words }}
 }
