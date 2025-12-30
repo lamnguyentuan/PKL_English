@@ -6,6 +6,7 @@
       <button
         onclick="playNativeSample('{{ sentence.text }}')"
         class="btn btn-link text-primary p-0 ms-2"
+        title="Nghe mẫu"
       >
         <i class="fas fa-volume-up fa-sm"></i>
       </button>
@@ -176,6 +177,7 @@
 
   // 2. Logic Ghi âm
   recordBtn.onclick = async () => {
+    // Nếu đang ghi âm thì dừng
     if (mediaRecorder && mediaRecorder.state === "recording") {
       mediaRecorder.stop();
       statusText.innerText = "Đang phân tích giọng nói của bạn...";
@@ -184,6 +186,7 @@
       return;
     }
 
+    // Bắt đầu ghi âm mới
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder = new MediaRecorder(stream);
@@ -199,22 +202,38 @@
         recordingUrl = URL.createObjectURL(audioBlob);
         document.getElementById("audioPlayback").src = recordingUrl;
 
+        // Chuẩn bị dữ liệu gửi lên Server
         const formData = new FormData();
         formData.append("audio_data", audioBlob, "recording.wav");
         formData.append("sentence_id", "{{ sentence.id }}");
+
+        // Gửi token qua cả FormData (dự phòng)
         formData.append("csrfmiddlewaretoken", "{{ csrf_token }}");
 
         try {
-          const response = await fetch('{% url "submit_pronunciation" %}', {
+          // --- SỬA ĐỔI QUAN TRỌNG TẠI ĐÂY ---
+          // 1. Dùng tên URL mới: api_submit_pronunciation
+          const response = await fetch('{% url "api_submit_pronunciation" %}', {
             method: "POST",
+            // 2. Thêm Header CSRF để tránh lỗi 403 Forbidden
+            headers: {
+              "X-CSRFToken": "{{ csrf_token }}",
+            },
             body: formData,
           });
+
           const result = await response.json();
 
-          if (result.status === "success") {
-            showResult(result.data);
+          // 3. Kiểm tra response.ok thay vì result.status
+          // Vì API Django REST Framework trả về dữ liệu trực tiếp khi thành công (HTTP 201)
+          if (response.ok) {
+            showResult(result); // result chính là cục data (overall_score, v.v.)
           } else {
-            alert("Lỗi: " + (result.message || "Không thể chấm điểm"));
+            // Nếu lỗi, server trả về { "error": "Nội dung lỗi" }
+            alert(
+              "Lỗi: " +
+                (result.error || result.message || "Không thể chấm điểm")
+            );
             resetUI();
           }
         } catch (err) {
@@ -231,6 +250,7 @@
       recordBtn.classList.add("btn-pulse");
       micIcon.className = "fas fa-stop fa-3x";
     } catch (err) {
+      console.error(err);
       alert("Vui lòng cho phép quyền truy cập Microphone.");
     }
   };
@@ -262,17 +282,21 @@
       // Bôi màu từng từ
       const feedbackContainer = document.getElementById("word-feedback");
       feedbackContainer.innerHTML = "";
-      data.full_response.Words.forEach((word) => {
-        const span = document.createElement("span");
-        span.innerText = word.Word + " ";
-        const score = word.PronunciationAssessment.AccuracyScore;
 
-        if (score >= 80) span.className = "text-success fw-bold";
-        else if (score >= 50) span.className = "text-warning fw-bold";
-        else span.className = "text-danger fw-bold";
+      // Kiểm tra xem api_response có tồn tại không trước khi loop
+      if (data.api_response && data.api_response.Words) {
+        data.api_response.Words.forEach((word) => {
+          const span = document.createElement("span");
+          span.innerText = word.Word + " ";
+          const score = word.PronunciationAssessment.AccuracyScore;
 
-        feedbackContainer.appendChild(span);
-      });
+          if (score >= 80) span.className = "text-success fw-bold";
+          else if (score >= 50) span.className = "text-warning fw-bold";
+          else span.className = "text-danger fw-bold";
+
+          feedbackContainer.appendChild(span);
+        });
+      }
     }, 300);
   }
 
